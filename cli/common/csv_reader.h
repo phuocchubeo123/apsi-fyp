@@ -11,7 +11,6 @@
 // APSI
 #include "apsi/item.h"
 #include "apsi/psi_params.h"
-#include "apsi/util/db_encoding.h"
 
 /**
 Simple CSV file parser

@@ -34,6 +34,15 @@ using namespace apsi::oprf;
 
 int start_sender(const CLP &cmd);
 
+unique_ptr<CSVReader::DBData> load_db(const string &db_file);
+
+shared_ptr<SenderDB> create_sender_db(
+    const CSVReader::DBData &db_data,
+    unique_ptr<PSIParams> psi_params,
+    OPRFKey &oprf_key,
+    size_t nonce_byte_count,
+    bool compress);
+
 int main(int argc, char *argv[]){
     prepare_console();
 
@@ -75,7 +84,14 @@ shared_ptr<SenderDB> try_load_csv_db(const CLP &cmd, OPRFKey &oprf_key)
 
     unique_ptr<CSVReader::DBData> db_data;
 
-    return param
+    if (cmd.db_file().empty() || !(db_data = load_db(cmd.db_file()))) {
+        // Failed to read db file
+        APSI_LOG_DEBUG("Failed to load data from a CSV file");
+        return nullptr;
+    }
+
+    return create_sender_db(
+        *db_data, move(params), oprf_key, cmd.nonce_byte_count(), cmd.compress());
 }
 
 int start_sender(const CLP& cmd){
@@ -97,4 +113,53 @@ int start_sender(const CLP& cmd){
     }
 
     return 0;
+}
+
+unique_ptr<CSVReader::DBData> load_db(const string &db_file)
+{
+    CSVReader::DBData db_data;
+    try {
+        CSVReader reader(db_file);
+        tie(db_data, ignore) = reader.read();
+    } catch (const exception &ex) {
+        APSI_LOG_WARNING("Could not open or read file `" << db_file << "`: " << ex.what());
+        return nullptr;
+    }
+
+    return make_unique<CSVReader::DBData>(move(db_data));
+}
+
+shared_ptr<SenderDB> create_sender_db(
+    const CSVReader::DBData &db_data,
+    unique_ptr<PSIParams> psi_params,
+    OPRFKey &oprf_key,
+    size_t nonce_byte_count,
+    bool compress)
+{
+    if (!psi_params) {
+        APSI_LOG_ERROR("No PSI parameters were given");
+        return nullptr;
+    }
+
+    shared_ptr<SenderDB> sender_db;
+    if (holds_alternative<CSVReader::UnlabeledData>(db_data)) {
+        APSI_LOG_INFO("Currently in non labeled mode")
+        try {
+            sender_db = make_shared<SenderDB>(*psi_params, compress);
+            sender_db->set_data(get<CSVReader::UnlabeledData>(db_data));
+
+            APSI_LOG_INFO(
+                "Created unlabeled SenderDB with " << sender_db->get_item_count() << " items");
+        } catch (const exception &ex) {
+            APSI_LOG_ERROR("Failed to create SenderDB: " << ex.what());
+            return nullptr;
+        }
+    } else if (holds_alternative<CSVReader::LabeledData>(db_data)) {
+        APSI_LOG_ERROR("We currently not yet support labeled PSI")
+    } else {
+        // Should never reach this point
+        APSI_LOG_ERROR("Loaded database is in an invalid state");
+        return nullptr;
+    }
+    return sender_db;
 }

@@ -176,7 +176,8 @@ namespace apsi {
 
     class Item {
     public:
-        using value_type = std::array<unsigned char, 16>;
+        using value_type = std::vector<bool>;
+        using value_hashed_type = std::array<unsigned char, 16>;
 
         /**
         Constructs a zero item.
@@ -185,21 +186,6 @@ namespace apsi {
 
         Item(const value_type &value) : value_(value)
         {}
-
-        /**
-        Constructs an Item from a BitstringView. This throws std::invalid_argument if the bitstring
-        doesn't fit into std::array<unsigned char, 16>.
-        */
-        template <typename T>
-        Item(const BitstringView<T> &bitstring)
-        {
-            auto bitstring_bytes = bitstring.data();
-            if (bitstring_bytes.size() > sizeof(value_)) {
-                throw std::invalid_argument("bitstring is too long to fit into an Item");
-            }
-
-            std::copy(bitstring_bytes.begin(), bitstring_bytes.end(), value_.begin());
-        }
 
         Item(const Item &) = default;
 
@@ -212,25 +198,15 @@ namespace apsi {
         /**
         Constructs an Item by hashing a given string of arbitrary length.
         */
-        template <typename CharT>
-        Item(const std::basic_string<CharT> &str)
+        Item(const std::basic_string<char> &str)
         {
-            operator=<CharT>(str);
+            operator=(str);
         }
 
         /**
         Hash a given string of arbitrary length into an Item.
         */
-        template <typename CharT>
-        Item &operator=(const std::basic_string<CharT> &str)
-        {
-            if (str.empty()) {
-                throw std::invalid_argument("str cannot be empty");
-            }
-
-            hash_to_value(str.data(), str.size() * sizeof(CharT));
-            return *this;
-        }
+        Item &operator=(const std::basic_string<char> &str);
 
         /**
         Returns the Bitstring representing this Item's data.
@@ -240,34 +216,6 @@ namespace apsi {
         bool operator==(const Item &other) const
         {
             return value_ == other.value_;
-        }
-
-        /**
-        Returns a span of a desired (standard layout) type to the label data.
-        */
-        template <typename T, typename = std::enable_if_t<std::is_standard_layout<T>::value>>
-        auto get_as() const
-        {
-            constexpr std::size_t count = sizeof(value_) / sizeof(T);
-            return gsl::span<std::add_const_t<T>, count>(
-                reinterpret_cast<std::add_const_t<T> *>(value_.data()), count);
-        }
-
-        /**
-        Returns a span of a desired (standard layout) type to the label data.
-        */
-        template <typename T, typename = std::enable_if_t<std::is_standard_layout<T>::value>>
-        auto get_as()
-        {
-            constexpr std::size_t count = sizeof(value_) / sizeof(T);
-            return gsl::span<T, count>(reinterpret_cast<T *>(value_.data()), count);
-        }
-
-        Item(std::uint64_t lw, std::uint64_t hw)
-        {
-            auto words = get_as<std::uint64_t>();
-            words[0] = lw;
-            words[1] = hw;
         }
 
         value_type value() const
@@ -280,12 +228,34 @@ namespace apsi {
             return value_;
         }
 
+        /**
+        Returns a span of a desired (standard layout) type to the label data.
+        */
+        template <typename T, typename = std::enable_if_t<std::is_standard_layout<T>::value>>
+        auto get_as() const
+        {
+            constexpr std::size_t count = sizeof(value_hashed_) / sizeof(T);
+            return gsl::span<std::add_const_t<T>, count>(
+                reinterpret_cast<std::add_const_t<T> *>(value_hashed_.data()), count);
+        }
+
+        /**
+        Returns a span of a desired (standard layout) type to the label data.
+        */
+        template <typename T, typename = std::enable_if_t<std::is_standard_layout<T>::value>>
+        auto get_as()
+        {
+            constexpr std::size_t count = sizeof(value_hashed_) / sizeof(T);
+            return gsl::span<T, count>(reinterpret_cast<T *>(value_hashed_.data()), count);
+        }
+
         std::string to_string() const;
 
     private:
         void hash_to_value(const void *in, std::size_t size);
-
         value_type value_{};
+        value_hashed_type value_hashed_{};
+
     }; // class Item
 
     /**
@@ -324,28 +294,3 @@ namespace apsi {
     */
     using LabelKey = std::array<unsigned char, label_key_byte_count>;
 } // namespace apsi
-
-namespace std {
-    /**
-    Specializes the std::hash template for Item and HashedItem.
-    */
-    template <>
-    struct hash<apsi::Item> {
-        std::size_t operator()(const apsi::Item &item) const
-        {
-            auto words = item.get_as<uint64_t>();
-            std::uint64_t result = 17;
-            result = 31 * result + words[0];
-            result = 31 * result + words[1];
-            return static_cast<std::size_t>(result);
-        }
-    };
-
-    template <>
-    struct hash<apsi::HashedItem> {
-        std::size_t operator()(const apsi::HashedItem &item) const
-        {
-            return hash<apsi::Item>()(item);
-        }
-    };
-} // namespace std
