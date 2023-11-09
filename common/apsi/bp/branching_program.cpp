@@ -1,164 +1,138 @@
-#include "branchingProgram.h"
+#include "branching_program.h"
 
-BinaryTree::BinaryTree(
-        int newMaxDepth): 
-    numNodes(0),
-    maxDepth(newMaxDepth)
-    {
-    /*
-        Initialize binary tree.
-        This tree is implemented in an array-like structure. 
-        To initialize it, we create the first element of multiple arrays mentioned in the construction. This first element represents the root node of the tree.
-    */
+using namespace std;
+using namespace apsi;
 
-    id.push_back(numNodes++);
+namespace apsi{
+    BP::BP(): 
+        numNodes(0)
+        {
 
-    leftChild.push_back(-1);
-    rightChild.push_back(-1);
-    parent.push_back(-1);
-    level.push_back(0);
-    isLeaf.push_back(0);
+        id.push_back(numNodes++);
 
-    nodeLabel.push_back(0);
-
-    const helib::EncryptedArray& ea = context.getEA();
-    nslots = ea.size();
-}
-
-void BinaryTree::addChildNode(int parentNode){
-    id.push_back(numNodes++);
-
-    leftChild.push_back(-1);
-    rightChild.push_back(-1);
-    parent.push_back(parentNode);
-    level.push_back(level[parentNode] + 1);
-
-    nodeLabel.push_back(0);
-
-    helib::Ctxt newCtxt(pubKey);
-    cost.push_back(newCtxt);
-}
-
-
-void BinaryTree::addNum(long long x){
-    int currentNode = 0;
-    for (int bit = 0; bit < maxDepth; bit++){
-        if (nodeLabel[currentNode] == 0){ // when tree is currently leave
-            leftChild[currentNode] = numNodes;
-            addChildNode(currentNode);
-
-            rightChild[currentNode] = numNodes;
-            addChildNode(currentNode);
-
-            nodeLabel[currentNode] = -1;
-        }
-
-        if (((x >> bit) & 1) ^ 1){
-            currentNode = leftChild[currentNode];
-        }
-        else{
-            currentNode = rightChild[currentNode];
-        }
+        leftChild.push_back(-1);
+        rightChild.push_back(-1);
+        parent.push_back(-1);
+        level.push_back(0);
+        isLeaf.push_back(0);
     }
 
-    nodeLabel[currentNode] = 1;
-}
+    int BP::addChildNode(int parentNode){
+        id.push_back(numNodes++);
 
-void BinaryTree::resetCost(){
-    helib::Ptxt<helib::BGV> zeroPtxt(context), onePtxt(context);  
-    for (int i = 0; i < nslots; i++){
-        zeroPtxt[i] = 0;
-        onePtxt[i] = 1;
+        leftChild.push_back(-1);
+        rightChild.push_back(-1);
+        parent.push_back(parentNode);
+        level.push_back(level[parentNode] + 1);
+
+        return numNodes-1;
     }
 
-    pubKey.Encrypt(cost[0], onePtxt);
 
-    queue<int> nodeQueue;
-    nodeQueue.push(0);
-
-    while (!nodeQueue.empty()){
-        int currentNode = nodeQueue.front();
-        nodeQueue.pop();
-        if (nodeLabel[currentNode] == -1){
-            pubKey.Encrypt(cost[leftChild[currentNode]], zeroPtxt);
-            nodeQueue.push(leftChild[currentNode]);
-
-            pubKey.Encrypt(cost[rightChild[currentNode]], onePtxt);
-            nodeQueue.push(rightChild[currentNode]);
+    void BP::addItem(const Item &item){
+        int currentNode = 0;
+        for (int bit = 0; bit < item.get_length(); bit++){
+            if (item.get_bit(bit) == 0){
+                if (leftChild[currentNode] == -1){
+                    leftChild[currentNode] = addChildNode(currentNode);
+                }
+                currentNode = leftChild[currentNode];
+            }
+            else{
+                if (rightChild[currentNode] == -1){
+                    rightChild[currentNode] = addChildNode(currentNode);
+                }
+                currentNode = rightChild[currentNode];
+            }
         }
     }
 }
 
-void BinaryTree::evaluate(vector<helib::Ctxt> ctxts){
-    queue<int> nodeQueue;
-    nodeQueue.push(0);
-    while (!nodeQueue.empty()){
-        int currentNode = nodeQueue.front();
-        nodeQueue.pop();
+// void BranchingProgram::resetCost(){
+//     queue<int> nodeQueue;
+//     nodeQueue.push(0);
 
-        if (nodeLabel[currentNode] != -1) continue;
+//     while (!nodeQueue.empty()){
+//         int currentNode = nodeQueue.front();
+//         nodeQueue.pop();
+//         if (nodeLabel[currentNode] == -1){
+//             nodeQueue.push(leftChild[currentNode]);
 
-        cost[leftChild[currentNode]] += ctxts[level[currentNode]];
-        cost[leftChild[currentNode]] += 1l;
-        nodeQueue.push(leftChild[currentNode]);
+//             nodeQueue.push(rightChild[currentNode]);
+//         }
+//     }
+// }
 
-        cost[rightChild[currentNode]] += ctxts[level[currentNode]];
-        cost[rightChild[currentNode]] += 1l;
-        nodeQueue.push(rightChild[currentNode]);
-    }
-}
+// void BranchingProgram::evaluate(vector<helib::Ctxt> ctxts){
+//     queue<int> nodeQueue;
+//     nodeQueue.push(0);
+//     while (!nodeQueue.empty()){
+//         int currentNode = nodeQueue.front();
+//         nodeQueue.pop();
 
-void BinaryTree::aggregate(){
-    queue<int> nodeQueue;
-    nodeQueue.push(0);
-    while (!nodeQueue.empty()){
-        int currentNode = nodeQueue.front();
-        nodeQueue.pop();
+//         if (nodeLabel[currentNode] != -1) continue;
+
+//         cost[leftChild[currentNode]] += ctxts[level[currentNode]];
+//         cost[leftChild[currentNode]] += 1l;
+//         nodeQueue.push(leftChild[currentNode]);
+
+//         cost[rightChild[currentNode]] += ctxts[level[currentNode]];
+//         cost[rightChild[currentNode]] += 1l;
+//         nodeQueue.push(rightChild[currentNode]);
+//     }
+// }
+
+// void BranchingProgram::aggregate(){
+//     queue<int> nodeQueue;
+//     nodeQueue.push(0);
+//     while (!nodeQueue.empty()){
+//         int currentNode = nodeQueue.front();
+//         nodeQueue.pop();
         
-        if (nodeLabel[currentNode] != -1) continue;
+//         if (nodeLabel[currentNode] != -1) continue;
 
-        cost[leftChild[currentNode]] *= cost[currentNode];
-        nodeQueue.push(leftChild[currentNode]);
+//         cost[leftChild[currentNode]] *= cost[currentNode];
+//         nodeQueue.push(leftChild[currentNode]);
 
-        cost[rightChild[currentNode]] *= cost[currentNode];
-        nodeQueue.push(rightChild[currentNode]);
-    }
-}
+//         cost[rightChild[currentNode]] *= cost[currentNode];
+//         nodeQueue.push(rightChild[currentNode]);
+//     }
+// }
 
-helib::Ctxt BinaryTree::evaluateLeaves(){
-    helib::Ctxt ans(pubKey);
-    helib::Ptxt<helib::BGV> ptxt(context);
-    for (int i = 0; i < nslots; i++) ptxt[i] = 0;
-    pubKey.Encrypt(ans, ptxt);
+// helib::Ctxt BinaryTree::evaluateLeaves(){
+//     helib::Ctxt ans(pubKey);
+//     helib::Ptxt<helib::BGV> ptxt(context);
+//     for (int i = 0; i < nslots; i++) ptxt[i] = 0;
+//     pubKey.Encrypt(ans, ptxt);
 
-    queue<int> nodeQueue;
-    nodeQueue.push(0);
-    while (!nodeQueue.empty()){
-        int currentNode = nodeQueue.front();
-        nodeQueue.pop();
+//     queue<int> nodeQueue;
+//     nodeQueue.push(0);
+//     while (!nodeQueue.empty()){
+//         int currentNode = nodeQueue.front();
+//         nodeQueue.pop();
 
-        if (nodeLabel[currentNode] != -1){
-            cost[currentNode] *= nodeLabel[currentNode];
-            ans += cost[currentNode];
-        }
-        else{
-            nodeQueue.push(leftChild[currentNode]);
-            nodeQueue.push(rightChild[currentNode]);
-        }
-    }
+//         if (nodeLabel[currentNode] != -1){
+//             cost[currentNode] *= nodeLabel[currentNode];
+//             ans += cost[currentNode];
+//         }
+//         else{
+//             nodeQueue.push(leftChild[currentNode]);
+//             nodeQueue.push(rightChild[currentNode]);
+//         }
+//     }
 
-    return ans;
-}
+//     return ans;
+// }
 
-helib::Ctxt BinaryTree::inSet(vector<helib::Ctxt> ctxts){
-    resetCost();
-    evaluate(ctxts);
-    aggregate();
-    helib::Ctxt ans = evaluateLeaves();
-    return ans;
-}
+// helib::Ctxt BinaryTree::inSet(vector<helib::Ctxt> ctxts){
+//     resetCost();
+//     evaluate(ctxts);
+//     aggregate();
+//     helib::Ctxt ans = evaluateLeaves();
+//     return ans;
+// }
 
-void BinaryTree::printTree(){
+// void BranchingProgram::printTree(){
     // queue<TreeNode*> q;
     // queue<TreeNode*> new_q;
     // q.push(root);
@@ -198,4 +172,4 @@ void BinaryTree::printTree(){
 
     // cout << "\n";
     // return;
-}
+// }

@@ -102,9 +102,9 @@ namespace apsi {
             table_params_.hash_func_count > TableParams::hash_func_count_max) {
             throw invalid_argument("hash_func_count is too large or too small");
         }
-        if (item_params_.felts_per_item < ItemParams::felts_per_item_min ||
-            item_params_.felts_per_item > ItemParams::felts_per_item_max) {
-            throw invalid_argument("felts_per_item is too large or too small");
+        if (item_params_.item_bit_count < ItemParams::item_bit_count_min ||
+            item_params_.item_bit_count > ItemParams::item_bit_count_max) {
+            throw invalid_argument("item_bit_count is too large or too small");
         }
         
         // Create a SEALContext (with expand_mod_chain == false) to check validity of parameters
@@ -121,49 +121,48 @@ namespace apsi {
                 "congruent to 1 modulo 2*poly_modulus_degree");
         }
 
-        // Compute the bit-length of an item
-        item_bit_count_per_felt_ =
-            static_cast<uint32_t>(seal_params_.plain_modulus().bit_count() - 1);
-        item_bit_count_ = item_bit_count_per_felt_ * item_params_.felts_per_item;
-
-        if (item_bit_count_ < item_bit_count_min || item_bit_count_ > item_bit_count_max) {
-            throw invalid_argument("parameters result in too large or too small item_bit_count");
+        max_bins_per_bundle_ = seal_params_.poly_modulus_degree();
+        if (table_params_.receiver_bins_per_bundle > max_bins_per_bundle_){
+            throw invalid_argument(
+                "Receiver's number of bins per bundle exceeds the maximum batch size!"
+            );
         }
-
-        // Compute how many items fit into a bundle. If felts_per_item is not a power of two, then
-        // we will simply leave a few of the batching slots unused instead of splitting items across
-        // multiple SEAL batches.
-        items_per_bundle_ =
-            static_cast<uint32_t>(seal_params_.poly_modulus_degree()) / item_params_.felts_per_item;
-
-        // Can we fit even one item into the SEAL ciphertext?
-        if (!items_per_bundle_) {
-            throw invalid_argument("poly_modulus_degree is too small");
+        if (table_params_.sender_bins_per_bundle > max_bins_per_bundle_){
+            throw invalid_argument(
+                "Sender's number of bins per bundle exceeds the maximum batch size!"
+            );
         }
-
-        // Compute bins_per_bundle
-        bins_per_bundle_ = items_per_bundle_ * item_params_.felts_per_item;
 
         // table_size must be a multiple of items_per_bundle_
-        if (table_params_.table_size % items_per_bundle_) {
+        if (table_params_.table_size % table_params_.receiver_bins_per_bundle) {
             throw invalid_argument(
                 "table_size must be a multiple of floor(poly_modulus_degree / felts_per_item)");
         }
 
+        sender_bins_per_bundle_ = table_params_.sender_bins_per_bundle;
+        receiver_bins_per_bundle_ = table_params_.receiver_bins_per_bundle;
+
         // Compute the number of bundle indices; this is now guaranteed to be greater than zero
-        bundle_idx_count_ = table_params_.table_size / items_per_bundle_;
+        bundle_idx_count_ = table_params_.table_size / receiver_bins_per_bundle_;
+
+        item_bit_count_ = item_params_.item_bit_count;
     }
 
     size_t PSIParams::save(ostream &out) const
     {
         flatbuffers::FlatBufferBuilder fbs_builder(128);
 
-        fbs::ItemParams item_params(item_params_.felts_per_item);
-
         fbs::TableParams table_params(
             table_params_.table_size,
             table_params_.max_items_per_bin,
-            table_params_.hash_func_count);
+            table_params_.hash_func_count,
+            table_params_.receiver_bins_per_bundle,
+            table_params_.sender_bins_per_bundle
+            );
+
+        fbs::ItemParams item_params(
+            item_params_.item_bit_count
+        );
 
         vector<seal_byte> temp;
         temp.resize(safe_cast<size_t>(seal_params_.save_size(compr_mode_type::none)));
@@ -175,7 +174,6 @@ namespace apsi {
 
         fbs::PSIParamsBuilder psi_params_builder(fbs_builder);
         psi_params_builder.add_version(apsi_serialization_version);
-        psi_params_builder.add_item_params(&item_params);
         psi_params_builder.add_table_params(&table_params);
         psi_params_builder.add_seal_params(seal_params);
         auto psi_params = psi_params_builder.Finish();
@@ -211,13 +209,15 @@ namespace apsi {
             throw runtime_error("failed to load parameters: incompatible serialization version");
         }
 
-        PSIParams::ItemParams item_params;
-        item_params.felts_per_item = psi_params->item_params()->felts_per_item();
-
         PSIParams::TableParams table_params;
         table_params.table_size = psi_params->table_params()->table_size();
         table_params.max_items_per_bin = psi_params->table_params()->max_items_per_bin();
         table_params.hash_func_count = psi_params->table_params()->hash_func_count();
+        table_params.receiver_bins_per_bundle = psi_params->table_params()->receiver_bins_per_bundle();
+        table_params.sender_bins_per_bundle = psi_params->table_params()->sender_bins_per_bundle();
+
+        PSIParams::ItemParams item_params;
+        item_params.item_bit_count = psi_params->item_params()->item_bit_count();
 
         PSIParams::SEALParams seal_params;
         auto &seal_params_data = *psi_params->seal_params()->data();
@@ -243,7 +243,7 @@ namespace apsi {
             throw runtime_error("failed to load parameters: invalid scheme type");
         }
 
-        return { PSIParams(item_params, table_params, seal_params), in_data.size() };
+        return { PSIParams(table_params, item_params, seal_params), in_data.size() };
     }
 
     #ifndef APSI_DISABLE_JSON
@@ -262,16 +262,20 @@ namespace apsi {
             table_params.table_size = json_value_ui32(json_table_params, "table_size");
             table_params.max_items_per_bin =
                 json_value_ui32(json_table_params, "max_items_per_bin");
+            table_params.receiver_bins_per_bundle =
+                json_value_ui32(json_table_params, "receiver_bins_per_bundle");
+            table_params.sender_bins_per_bundle =
+                json_value_ui32(json_table_params, "sender_bins_per_bundle");
         } catch (const exception &ex) {
             APSI_LOG_ERROR("Failed to load table_params from JSON string: " << ex.what());
             throw;
         }
 
-        // Load ItemParams
+        // Load TableParams
         PSIParams::ItemParams item_params;
         try {
             const auto &json_item_params = get_non_null_json_value(root, "item_params");
-            item_params.felts_per_item = json_value_ui32(json_item_params, "felts_per_item");
+            item_params.item_bit_count = json_value_ui32(json_item_params, "item_bit_count");
         } catch (const exception &ex) {
             APSI_LOG_ERROR("Failed to load item_params from JSON string: " << ex.what());
             throw;
@@ -314,7 +318,7 @@ namespace apsi {
             throw;
         }
 
-        return PSIParams(item_params, table_params, seal_params);
+        return PSIParams(table_params, item_params, seal_params);
     }
 #else
     PSIParams PSIParams::Load(const string &in)
@@ -326,8 +330,7 @@ namespace apsi {
     string PSIParams::to_string() const
     {
         stringstream ss;
-        ss << "item_params.felts_per_item: " << item_params_.felts_per_item
-           << "; table_params.table_size: " << table_params_.table_size
+        ss << "; table_params.table_size: " << table_params_.table_size
            << "; table_params.max_items_per_bin: " << table_params_.max_items_per_bin
            << "; table_params.hash_func_count: " << table_params_.hash_func_count
            << "; seal_params.poly_modulus_degree: " << seal_params_.poly_modulus_degree()

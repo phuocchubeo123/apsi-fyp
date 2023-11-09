@@ -75,12 +75,15 @@ shared_ptr<SenderDB> try_load_sender_db(const CLP &cmd, OPRFKey &oprf_key)
 
 shared_ptr<SenderDB> try_load_csv_db(const CLP &cmd, OPRFKey &oprf_key)
 {
+    APSI_LOG_INFO("Reading PSI parameters...")
     unique_ptr<PSIParams> params = build_psi_params(cmd);
     if (!params) {
         // We must have valid parameters given
         APSI_LOG_ERROR("Failed to set PSI parameters");
         return nullptr;
     }
+
+    APSI_LOG_INFO("Successfully read PSI parameters!")
 
     unique_ptr<CSVReader::DBData> db_data;
 
@@ -105,6 +108,8 @@ int start_sender(const CLP& cmd){
     // Try loading first as a SenderDB, then as a CSV file
     shared_ptr<SenderDB> sender_db;
     OPRFKey oprf_key;
+
+    APSI_LOG_INFO("Trying to load sender db...");
 
     if (!(sender_db = try_load_sender_db(cmd, oprf_key)) &&
         !(sender_db = try_load_csv_db(cmd, oprf_key))) {

@@ -228,6 +228,14 @@ namespace apsi {
             return value_;
         }
 
+        bool get_bit(short bit) const{
+            return value_[bit];
+        }
+
+        int get_length() const{
+            return value_.size();
+        }
+
         /**
         Returns a span of a desired (standard layout) type to the label data.
         */

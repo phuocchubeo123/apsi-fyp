@@ -1,29 +1,32 @@
 #pragma once
 
 #include <vector>
+#include <queue>
 
-struct BinaryTree{  
-public:
-    int numNodes;
-    int maxDepth;
+// APSI
+#include "apsi/item.h"
 
-    std::vector<int> id;
+namespace apsi{
+    struct BP{  
+    public:
+        int numNodes;
 
-    std::vector<int> leftChild;
-    std::vector<int> rightChild;
-    std::vector<int> parent;
-    std::vector<int> level;
-    std::vector<int> isLeaf;
+        std::vector<int> id;
 
-    BinaryTree(
-        int newMaxDepth);
-    void addChildNode(int parentNode);
-    void addNum(long long x);
-    void resetCost();
-    // void evaluate(vector<helib::Ctxt> ctxts);
-    void aggregate();
-    // helib::Ctxt evaluateLeaves();
-    // helib::Ctxt inSet(vector<helib::Ctxt> ctxts);
+        std::vector<int> leftChild;
+        std::vector<int> rightChild;
+        std::vector<int> parent;
+        std::vector<int> level;
+        std::vector<int> isLeaf;
 
-    void printTree();
-}; 
+        /*
+            Initialize binary tree.
+            This tree is implemented in an array-like structure. 
+            To initialize it, we create the first element of multiple arrays mentioned in the construction. This first element represents the root node of the tree.
+        */
+        BP();
+
+        int addChildNode(int parentNode);
+        void addItem(const Item& item);
+    }; 
+}

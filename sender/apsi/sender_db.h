@@ -74,14 +74,6 @@ namespace apsi {
             void clear();
 
             /**
-            Returns whether this is a labeled SenderDB.
-            */
-            bool is_labeled() const
-            {
-                return 0 != label_byte_count_;
-            }
-
-            /**
             Indicates whether SEAL plaintexts are compressed in memory.
             */
             bool is_compressed() const
@@ -288,20 +280,6 @@ namespace apsi {
             A read-write lock to protect the database from modification while in use.
             */
             mutable seal::util::ReaderWriterLocker db_lock_;
-
-            /**
-            Indicates the size of the label in bytes. A zero value indicates an unlabeled SenderDB.
-            */
-            std::size_t label_byte_count_;
-
-            /**
-            Indicates the number of bytes of the effective label reserved for a randomly sampled
-            nonce. The effective label byte count is the sum of label_byte_count and
-            nonce_byte_count. The value can range between 0 and 16. If label_byte_count is zero,
-            nonce_byte_count has no effect.
-            */
-            std::size_t nonce_byte_count_;
-
             /**
             The number of items currently in the SenderDB.
             */
@@ -322,7 +300,7 @@ namespace apsi {
             All the BinBundles in the database, indexed by bundle index. The set (represented by a
             vector internally) at bundle index i contains all the BinBundles with bundle index i.
             */
-            std::vector<std::vector<BinBundle>> bin_bundles_;
+            std::vector<BinBundle> bin_bundles_;
 
             /**
             Holds the OPRF key for this SenderDB.

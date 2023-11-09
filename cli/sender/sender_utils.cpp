@@ -18,6 +18,8 @@ using namespace apsi;
 unique_ptr<PSIParams> build_psi_params(const CLP &cmd){
     string params_json;
 
+    APSI_LOG_INFO("Reading json file into a json string...")
+
     try{
         throw_if_file_invalid(cmd.params_file());
         fstream input_file(cmd.params_file(), ios_base::in);
@@ -39,6 +41,8 @@ unique_ptr<PSIParams> build_psi_params(const CLP &cmd){
             "Error trying to read input file " << cmd.params_file() << ": " << ex.what());
         return nullptr;
     }
+
+    APSI_LOG_INFO("Create json string successfully! Loading PSI params from the json string...")
 
     unique_ptr<PSIParams> params;
     try {

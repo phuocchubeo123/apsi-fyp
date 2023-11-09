@@ -40,22 +40,16 @@ namespace apsi{
             {}
         };
 
-        constexpr static std::uint32_t item_bit_count_min = 32;
-
-        constexpr static std::uint32_t item_bit_count_max = 128;
-
         /**
-        Parameters describing the item and label properties.
+        Item parameters
         */
-        struct ItemParams {
-            constexpr static std::uint32_t felts_per_item_max = 32;
 
-            constexpr static std::uint32_t felts_per_item_min = 1;
+       struct ItemParams {
+            constexpr static std::uint32_t item_bit_count_min = 32;
 
-            /**
-            Specified how many SEAL batching slots are occupied by an item.
-            */
-            std::uint32_t felts_per_item;
+            constexpr static std::uint32_t item_bit_count_max = 128;
+
+            std::uint32_t item_bit_count;
         };
 
         /**
@@ -83,12 +77,16 @@ namespace apsi{
             The number of hash functions used in receiver's cuckoo hashing.
             */
             std::uint32_t hash_func_count;
-        };
 
-        const ItemParams &item_params() const
-        {
-            return item_params_;
-        }
+            /**
+            Suppose some bins are batched into a bundle, there are 2 directions:
+            1. Batching receiver's items for ease of evaluation
+            2. Batching sender's item to reduce the number of nodes in a BP
+            */
+            std::uint32_t receiver_bins_per_bundle;
+            std::uint32_t sender_bins_per_bundle;
+
+        };
 
         const TableParams &table_params() const
         {
@@ -100,14 +98,14 @@ namespace apsi{
             return seal_params_;
         }
 
-        std::uint32_t items_per_bundle() const
+        std::uint32_t sender_bins_per_bundle() const
         {
-            return items_per_bundle_;
+            return sender_bins_per_bundle_;
         }
 
-        std::uint32_t bins_per_bundle() const
+        std::uint32_t receiver_bins_per_bundle() const
         {
-            return bins_per_bundle_;
+            return receiver_bins_per_bundle_;
         }
 
         std::uint32_t bundle_idx_count() const
@@ -120,18 +118,15 @@ namespace apsi{
             return item_bit_count_;
         }
 
-        std::uint32_t item_bit_count_per_felt() const
-        {
-            return item_bit_count_per_felt_;
-        }
-
         PSIParams(
-            const ItemParams &item_params,
             const TableParams &table_params,
+            const ItemParams &item_params,
             const SEALParams &seal_params)
-            : item_params_(item_params), table_params_(table_params), 
+            : table_params_(table_params), 
+              item_params_(item_params),
               seal_params_(seal_params)
         {
+            APSI_LOG_INFO("Begin initializing PSIParams from loaded parameters...")
             initialize();
         }
 
@@ -149,9 +144,8 @@ namespace apsi{
         {
             return std::min<double>(
                 0.0,
-                (-static_cast<double>(item_bit_count_per_felt_) +
-                 std::log2(static_cast<double>(table_params_.max_items_per_bin))) *
-                    item_params_.felts_per_item);
+                (-static_cast<double>(item_bit_count_) +
+                 std::log2(static_cast<double>(table_params_.max_items_per_bin))));
         }
 
         /**
@@ -170,21 +164,21 @@ namespace apsi{
         static PSIParams Load(const std::string &in);
 
     private:
-        ItemParams item_params_;
-
         TableParams table_params_;
+
+        ItemParams item_params_;
 
         SEALParams seal_params_;
 
-        std::uint32_t items_per_bundle_;
+        std::uint32_t sender_bins_per_bundle_;
 
-        std::uint32_t bins_per_bundle_;
+        std::uint32_t receiver_bins_per_bundle_;
 
         std::uint32_t bundle_idx_count_;
 
         std::uint32_t item_bit_count_;
 
-        std::uint32_t item_bit_count_per_felt_;
+        std::uint32_t max_bins_per_bundle_;
 
         void initialize();
     };

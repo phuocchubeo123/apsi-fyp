@@ -1,13 +1,15 @@
 namespace apsi.fbs;
 
 struct ItemParams {
-    felts_per_item:uint32;
+    item_bit_count:uint32;
 }
 
 struct TableParams {
     table_size:uint32;
     max_items_per_bin:uint32;
     hash_func_count:uint32;
+    receiver_bins_per_bundle:uint32;
+    sender_bins_per_bundle:uint32;
 }
 
 table SEALParams {

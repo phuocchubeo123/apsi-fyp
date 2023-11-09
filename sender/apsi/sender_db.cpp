@@ -50,7 +50,7 @@ namespace apsi {
             Computes all cuckoo hash table locations for a given item.
             */
             unordered_set<location_type> all_locations(
-                const vector<LocFunc> &hash_funcs, const HashedItem &item)
+                const vector<LocFunc> &hash_funcs, const Item &item)
             {
                 unordered_set<location_type> result;
                 for (auto &hf : hash_funcs) {
@@ -76,6 +76,154 @@ namespace apsi {
                 size_t bundle_idx = (cuckoo_idx - bin_idx) / bins_per_bundle;
 
                 return { bin_idx, bundle_idx };
+            }
+
+            /**
+            Compute each Item's cuckoo index
+            */
+            vector<pair<Item, size_t>> preprocess_unlabeled_data(
+                const vector<Item>::const_iterator begin,
+                const vector<Item>::const_iterator end,
+                const PSIParams &params)
+            {
+                STOPWATCH(sender_stopwatch, "preprocess_unlabeled_data");
+                APSI_LOG_DEBUG(
+                    "Start preprocessing " << distance(begin, end) << " unlabeled items");
+                
+                // Some variables we'll need
+                size_t item_bit_count = params.item_bit_count();
+
+                // Set up Kuku hash functions
+                auto hash_funcs = hash_functions(params);
+
+                // Calculate the cuckoo indices for each item. Store every pair of (item-label,
+                // cuckoo_idx) in a vector. Later, we're gonna sort this vector by cuckoo_idx and
+                // use the result to parallelize the work of inserting the items into BinBundles.
+                vector<pair<Item, size_t>> data_with_indices;
+                for (auto it = begin; it != end; it++) {
+                    const Item &item = *it;
+
+                    // Get the cuckoo table locations for this item and add to data_with_indices
+                    for (auto location : all_locations(hash_funcs, item)) {
+                        // The current hash value is an index into a table of Items. In reality our
+                        // BinBundles are tables of bins, which contain chunks of items. How many
+                        // chunks? bins_per_item many chunks
+                        size_t bin_idx = location;
+
+                        // Store the data along with its index
+                        data_with_indices.emplace_back(make_pair(item, bin_idx));
+                    }
+                }
+
+                return data_with_indices;
+            }
+
+            /**
+            Inserts the given items and corresponding labels into bin_bundles at their respective
+            cuckoo indices. It will only insert the data with bundle index in the half-open range
+            range indicated by work_range. If inserting into a BinBundle would make the number of
+            items in a bin larger than max_bin_size, this function will create and insert a new
+            BinBundle. If overwrite is set, this will overwrite the labels if it finds an
+            AlgItemLabel that matches the input perfectly.
+            */
+            template <typename T>
+            void insert_or_assign_worker(
+                const vector<pair<T, size_t>> &data_with_indices,
+                vector<BinBundle> &bin_bundles,
+                CryptoContext &crypto_context,
+                uint32_t bundle_index,
+                uint32_t receiver_bins_per_bundle,
+                size_t max_bin_size,
+                bool compressed)
+            {
+                STOPWATCH(sender_stopwatch, "insert_or_assign_worker");
+                APSI_LOG_DEBUG(
+                    "Insert-or-Assign worker for bundle index "
+                    << bundle_index << "; mode of operation: ");
+
+                // Iteratively insert each item-label pair at the given cuckoo index
+                for (auto &data_with_idx : data_with_indices) {
+                    const T &data = data_with_idx.first;
+
+                    // Get the bundle index
+                    size_t cuckoo_idx = data_with_idx.second;
+                    size_t bin_idx, bundle_idx;
+                    tie(bin_idx, bundle_idx) = unpack_cuckoo_idx(cuckoo_idx, receiver_bins_per_bundle);
+
+                    // If the bundle_idx isn't in the prescribed range, don't try to insert this
+                    // data
+                    if (bundle_idx != bundle_index) {
+                        // Dealing with this bundle index is not our job
+                        continue;
+                    }
+
+                    // Get the bundle set at the given bundle index
+                    BinBundle &bundle = bin_bundles[bundle_idx];
+
+                }
+            }
+
+            /**
+            Takes data to be inserted, splits it up, and distributes it so that
+            thread_count many threads can all insert in parallel. If overwrite is set, this will
+            overwrite the labels if it finds an AlgItemLabel that matches the input perfectly.
+            */
+            template <typename T>
+            void dispatch_insert_or_assign(
+                vector<pair<T, size_t>> &data_with_indices,
+                vector<BinBundle> &bin_bundles,
+                CryptoContext &crypto_context,
+                uint32_t receiver_bins_per_bundle,
+                uint32_t max_bin_size,
+                bool compressed)
+            {
+                ThreadPoolMgr tpm;
+                
+                // Collect the bundle indices and partition them into thread_count many partitions.
+                // By some uniformity assumption, the number of things to insert per partition
+                // should be roughly the same. Note that the contents of bundle_indices is always
+                // sorted (increasing order).
+                set<size_t> bundle_indices_set;
+                for (auto &data_with_idx: data_with_indices){
+                    size_t cuckoo_idx = data_with_idx.second;
+                    size_t bin_idx, bundle_idx;
+                    tie(bin_idx, bundle_idx) = unpack_cuckoo_idx(cuckoo_idx, receiver_bins_per_bundle);
+                    bundle_indices_set.insert(bundle_idx);
+                }
+
+                vector<size_t> bundle_indices;
+                bundle_indices.reserve(bundle_indices_set.size());
+                copy(
+                    bundle_indices_set.begin(),
+                    bundle_indices_set.end(),
+                    back_inserter(bundle_indices));
+                sort(bundle_indices.begin(), bundle_indices.end());
+
+                // Run the threads on the partitions
+                vector<future<void>> futures(bundle_indices.size());
+                APSI_LOG_INFO(
+                    "Launching " << bundle_indices.size() << " insert-or-assign worker tasks");
+                size_t future_idx = 0;
+
+                for (auto &bundle_idx : bundle_indices) {
+                    futures[future_idx++] = tpm.thread_pool().enqueue([&, bundle_idx]() {
+                        insert_or_assign_worker(
+                            data_with_indices,
+                            bin_bundles,
+                            crypto_context,
+                            static_cast<uint32_t>(bundle_idx),
+                            receiver_bins_per_bundle,
+                            max_bin_size,
+                            compressed);
+                    });
+                }
+
+                // Wait for the tasks to finish
+                for (auto &f : futures) {
+                    f.get();
+                }
+
+                APSI_LOG_INFO("Finished insert-or-assign worker tasks");
             }
         }
 
@@ -107,8 +255,6 @@ namespace apsi {
 
             params_ = source.params_;
             crypto_context_ = source.crypto_context_;
-            label_byte_count_ = source.label_byte_count_;
-            nonce_byte_count_ = source.nonce_byte_count_;
             item_count_ = source.item_count_;
             compressed_ = source.compressed_;
             stripped_ = source.stripped_;
@@ -155,13 +301,24 @@ namespace apsi {
                 APSI_LOG_ERROR("Cannot insert data to a stripped SenderDB");
                 throw logic_error("failed to insert data");
             }
-            if (is_labeled()) {
-                APSI_LOG_ERROR("Attempted to insert unlabeled data but this is a labeled SenderDB");
-                throw logic_error("failed to insert data");
-            }
 
             STOPWATCH(sender_stopwatch, "SenderDB::insert_or_assign (unlabeled)");
             APSI_LOG_INFO("Start inserting " << data.size() << " items in SenderDB");
+
+            vector<pair<Item, size_t>> data_with_indices =
+                preprocess_unlabeled_data(data.begin(), data.end(), params_);
+
+            uint32_t max_bin_size = params_.table_params().max_items_per_bin;
+            uint32_t receiver_bins_per_bundle = params_.table_params().receiver_bins_per_bundle;
+            uint32_t sender_bins_per_bundle = params_.table_params().sender_bins_per_bundle;
+
+            dispatch_insert_or_assign(
+                data_with_indices,
+                bin_bundles_,
+                crypto_context_,
+                receiver_bins_per_bundle,
+                max_bin_size,
+                compressed_);
         }
     }
 }
