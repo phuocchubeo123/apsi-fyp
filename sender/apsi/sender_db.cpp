@@ -133,8 +133,7 @@ namespace apsi {
                 CryptoContext &crypto_context,
                 uint32_t bundle_index,
                 uint32_t receiver_bins_per_bundle,
-                size_t max_bin_size,
-                bool compressed)
+                size_t max_bin_size)
             {
                 STOPWATCH(sender_stopwatch, "insert_or_assign_worker");
                 APSI_LOG_DEBUG(
@@ -160,7 +159,11 @@ namespace apsi {
                     // Get the bundle set at the given bundle index
                     BinBundle &bundle = bin_bundles[bundle_idx];
 
+                    int32_t new_bundle_size = bundle.multi_insert(data);
                 }
+
+                APSI_LOG_DEBUG(
+                    "Insert-or-Assign worker: finished processing bundle index " << bundle_index);
             }
 
             /**
@@ -174,8 +177,7 @@ namespace apsi {
                 vector<BinBundle> &bin_bundles,
                 CryptoContext &crypto_context,
                 uint32_t receiver_bins_per_bundle,
-                uint32_t max_bin_size,
-                bool compressed)
+                uint32_t max_bin_size)
             {
                 ThreadPoolMgr tpm;
                 
@@ -213,8 +215,7 @@ namespace apsi {
                             crypto_context,
                             static_cast<uint32_t>(bundle_idx),
                             receiver_bins_per_bundle,
-                            max_bin_size,
-                            compressed);
+                            max_bin_size);
                     });
                 }
 
@@ -231,13 +232,16 @@ namespace apsi {
         Creating sender DB in non labeled mode, do not need OPRF
         */
         SenderDB::SenderDB(
-            PSIParams params, bool compressed)
+            PSIParams params)
             : params_(params), crypto_context_(params_), 
-              item_count_(0),
-              compressed_(compressed)
+              item_count_(0)
         {
             // Set the evaluator. This will be used for BatchedPlaintextPolyn::eval.
             crypto_context_.set_evaluator();
+
+            // Clear the BinBundles
+            bin_bundles_.clear();
+            bin_bundles_.resize(params_.bundle_idx_count());
 
             // Reset the SenderDB data structures
             clear();
@@ -256,8 +260,6 @@ namespace apsi {
             params_ = source.params_;
             crypto_context_ = source.crypto_context_;
             item_count_ = source.item_count_;
-            compressed_ = source.compressed_;
-            stripped_ = source.stripped_;
 
             // Lock the source before moving stuff over
             auto source_lock = source.get_writer_lock();
@@ -282,9 +284,6 @@ namespace apsi {
             // Clear the BinBundles
             bin_bundles_.clear();
             bin_bundles_.resize(params_.bundle_idx_count());
-
-            // Reset the stripped_ flag
-            stripped_ = false;
         }
 
         void SenderDB::clear()
@@ -297,11 +296,6 @@ namespace apsi {
 
         void SenderDB::insert_or_assign(const vector<Item> &data)
         {
-            if (stripped_) {
-                APSI_LOG_ERROR("Cannot insert data to a stripped SenderDB");
-                throw logic_error("failed to insert data");
-            }
-
             STOPWATCH(sender_stopwatch, "SenderDB::insert_or_assign (unlabeled)");
             APSI_LOG_INFO("Start inserting " << data.size() << " items in SenderDB");
 
@@ -317,8 +311,15 @@ namespace apsi {
                 bin_bundles_,
                 crypto_context_,
                 receiver_bins_per_bundle,
-                max_bin_size,
-                compressed_);
+                max_bin_size);
+
+            // APSI_LOG_INFO("Number of bundles: " << bin_bundles_.size());
+            // APSI_LOG_INFO("All bundle sizes: ");
+            for (int i = 0; i < bin_bundles_.size(); i++){
+                BinBundle &bundle = bin_bundles_[i];
+                item_count_ += bundle.get_bundle_size();
+            }
+            // APSI_LOG_INFO("");
         }
     }
 }

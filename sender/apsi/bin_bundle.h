@@ -30,18 +30,47 @@ namespace apsi {
         an element of the unit type (in the case of unlabeled PSI).
         */
         class BinBundle {
-        private:
-            /**
-            This is true iff cache_ needs to be regenerated
-            */
-            bool cache_invalid_;
+        public:
+            BinBundle();
 
+            BinBundle(const BinBundle &copy) = delete;
+
+            BinBundle(BinBundle &&source) = default;
+
+            BinBundle &operator=(const BinBundle &assign) = delete;
+
+            BinBundle &operator=(BinBundle &&assign) = default;
+
+            /**
+            Inserts item-label pairs into sequential bins, beginning at start_bin_idx. If dry_run is
+            specified, no change is made to the BinBundle. On success, returns the size of the
+            largest bin bins in the modified range, after insertion has taken place. On failed
+            insertion, returns -1. On failure, no modification is made to the BinBundle.
+            */
+            template <typename T>
+            std::int32_t multi_insert(const T &item);
+
+            /**
+            Clears the content of the BinBundle
+            */
+            void clear();
+
+            /**
+            Get the number of elements inserted in the BP
+            */
+            int32_t get_bundle_size(){
+                return bundle_size_;
+            }
+
+        private:
             /**
             We need this to make Plaintexts
             */
             CryptoContext crypto_context_;
 
             apsi::BP bp_;
+
+            int32_t bundle_size_;
         };
     }
 }

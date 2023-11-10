@@ -4,10 +4,7 @@ using namespace std;
 using namespace apsi;
 
 namespace apsi{
-    BP::BP(): 
-        numNodes(0)
-        {
-
+    BP::BP(): numNodes(0), numLeaves(0){
         id.push_back(numNodes++);
 
         leftChild.push_back(-1);
@@ -29,7 +26,7 @@ namespace apsi{
     }
 
 
-    void BP::addItem(const Item &item){
+    int32_t BP::addItem(const Item &item){
         int currentNode = 0;
         for (int bit = 0; bit < item.get_length(); bit++){
             if (item.get_bit(bit) == 0){
@@ -45,6 +42,8 @@ namespace apsi{
                 currentNode = rightChild[currentNode];
             }
         }
+        if (currentNode == numNodes-1) numLeaves++;
+        return numLeaves;
     }
 }
 

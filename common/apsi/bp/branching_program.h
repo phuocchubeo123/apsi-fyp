@@ -10,6 +10,7 @@ namespace apsi{
     struct BP{  
     public:
         int numNodes;
+        int numLeaves;
 
         std::vector<int> id;
 
@@ -27,6 +28,6 @@ namespace apsi{
         BP();
 
         int addChildNode(int parentNode);
-        void addItem(const Item& item);
+        int32_t addItem(const Item& item);
     }; 
 }

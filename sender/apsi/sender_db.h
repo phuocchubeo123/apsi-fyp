@@ -55,8 +55,7 @@ namespace apsi {
             Creates a new SenderDB, non labeled mode, do not need oprf
             */
             SenderDB(
-                PSIParams params,
-                bool compressed = true);
+                PSIParams params);
 
             /**
             Creates a new SenderDB by moving from an existing one.
@@ -72,23 +71,6 @@ namespace apsi {
             Clears the database. Every item and label will be removed. The OPRF key is unchanged.
             */
             void clear();
-
-            /**
-            Indicates whether SEAL plaintexts are compressed in memory.
-            */
-            bool is_compressed() const
-            {
-                return compressed_;
-            }
-
-            /**
-            Indicates whether the SenderDB has been stripped of all information not needed for
-            serving a query.
-            */
-            bool is_stripped() const
-            {
-                return stripped_;
-            }
 
             /**
             Strips the SenderDB of all information not needed for serving a query. Returns a copy of
@@ -284,17 +266,6 @@ namespace apsi {
             The number of items currently in the SenderDB.
             */
             std::size_t item_count_;
-
-            /**
-            Indicates whether SEAL plaintexts are compressed in memory.
-            */
-            bool compressed_;
-
-            /**
-            Indicates whether the SenderDB has been stripped of all information not needed for
-            serving a query.
-            */
-            bool stripped_;
 
             /**
             All the BinBundles in the database, indexed by bundle index. The set (represented by a

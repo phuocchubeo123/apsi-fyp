@@ -117,6 +117,21 @@ int start_sender(const CLP& cmd){
         return -1;
     }
 
+    // Try to save the SenderDB if a save file was given
+    // if (!cmd.sdb_out_file().empty() && !try_save_sender_db(cmd, sender_db, oprf_key)) {
+    //     return -1;
+    // }
+
+    // Run the dispatcher
+    atomic<bool> stop = false;
+    ZMQSenderDispatcher dispatcher(sender_db, oprf_key);
+
+    // The dispatcher will run until stopped.
+    dispatcher.run(stop, cmd.net_port());
+
+    return 0;
+
+
     return 0;
 }
 
@@ -150,7 +165,7 @@ shared_ptr<SenderDB> create_sender_db(
     if (holds_alternative<CSVReader::UnlabeledData>(db_data)) {
         APSI_LOG_INFO("Currently in non labeled mode")
         try {
-            sender_db = make_shared<SenderDB>(*psi_params, compress);
+            sender_db = make_shared<SenderDB>(*psi_params);
             sender_db->set_data(get<CSVReader::UnlabeledData>(db_data));
 
             APSI_LOG_INFO(
