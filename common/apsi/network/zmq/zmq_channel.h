@@ -107,7 +107,7 @@ namespace apsi {
             parameter request, an OPRF request, or a query request. The function throws an exception
             on failure.
             */
-            void send(std::unique_ptr<SenderOperation> sop) override;
+            // void send(std::unique_ptr<SenderOperation> sop) override;
 
             /**
             Receive a ZMQSenderOperation from a receiver. Operations of type sop_query and
@@ -116,10 +116,10 @@ namespace apsi {
             on failure. This call does not block if wait_for_message is false: if there is no
             operation pending, it will immediately return nullptr.
             */
-            virtual std::unique_ptr<ZMQSenderOperation> receive_network_operation(
-                std::shared_ptr<seal::SEALContext> context,
-                bool wait_for_message,
-                SenderOperationType expected = SenderOperationType::sop_unknown);
+            // virtual std::unique_ptr<ZMQSenderOperation> receive_network_operation(
+            //     std::shared_ptr<seal::SEALContext> context,
+            //     bool wait_for_message,
+            //     SenderOperationType expected = SenderOperationType::sop_unknown);
 
             /**
             Receive a ZMQSenderOperation from a receiver. Operations of type sop_query and
@@ -128,12 +128,12 @@ namespace apsi {
             on failure. This call does not block: if there is no operation pending, it will
             immediately return nullptr.
             */
-            virtual std::unique_ptr<ZMQSenderOperation> receive_network_operation(
-                std::shared_ptr<seal::SEALContext> context,
-                SenderOperationType expected = SenderOperationType::sop_unknown)
-            {
-                return receive_network_operation(std::move(context), false, expected);
-            }
+            // virtual std::unique_ptr<ZMQSenderOperation> receive_network_operation(
+            //     std::shared_ptr<seal::SEALContext> context,
+            //     SenderOperationType expected = SenderOperationType::sop_unknown)
+            // {
+            //     return receive_network_operation(std::move(context), false, expected);
+            // }
 
             /**
             Send a ZMQSenderOperationResponse from a sender to a receiver. These operations
@@ -142,47 +142,47 @@ namespace apsi {
             the client identifier from the received ZMQSenderOperation and use the same client
             identifier in the ZMQSenderOperationResponse.
             */
-            virtual void send(std::unique_ptr<ZMQSenderOperationResponse> sop_response);
+            // virtual void send(std::unique_ptr<ZMQSenderOperationResponse> sop_response);
 
             /**
             Receive a SenderOperationResponse from a sender. The function returns nullptr on
             failure.
             */
-            std::unique_ptr<SenderOperationResponse> receive_response(
-                SenderOperationType expected = SenderOperationType::sop_unknown) override;
+            // std::unique_ptr<SenderOperationResponse> receive_response(
+            //     SenderOperationType expected = SenderOperationType::sop_unknown) override;
 
             /**
             Send a ZMQResultPackage to a receiver. The function throws and exception on failure. The
             sender is expected to manually read the client identifier from the received
             ZMQSenderOperation and use the same client identifier in the ZMQResultPackage.
             */
-            virtual void send(std::unique_ptr<ZMQResultPackage> rp);
+            // virtual void send(std::unique_ptr<ZMQResultPackage> rp);
 
             /**
             Receive a ResultPackage from a sender. A valid seal::SEALContext must be provided. The
             function returns nullptr on failure.
             */
-            std::unique_ptr<ResultPackage> receive_result(
-                std::shared_ptr<seal::SEALContext> context) override;
+            // std::unique_ptr<ResultPackage> receive_result(
+            //     std::shared_ptr<seal::SEALContext> context) override;
 
             /**
             Do not use this function. Use ZMQChannel::receive_network_operation instead.
             */
-            std::unique_ptr<SenderOperation> receive_operation(
-                std::shared_ptr<seal::SEALContext> context,
-                SenderOperationType expected = SenderOperationType::sop_unknown) override;
+            // std::unique_ptr<SenderOperation> receive_operation(
+            //     std::shared_ptr<seal::SEALContext> context,
+            //     SenderOperationType expected = SenderOperationType::sop_unknown) override;
 
             /**
             Do not use this function. Use
             ZMQChannel::send(std::unique_ptr<ZMQSenderOperationResponse>) instead.
             */
-            void send(std::unique_ptr<SenderOperationResponse> sop_response) override;
+            // void send(std::unique_ptr<SenderOperationResponse> sop_response) override;
 
             /**
             Do not use this function. Use ZMQChannel::send(std::unique_ptr<ZMQResultPackage>)
             instead.
             */
-            void send(std::unique_ptr<ResultPackage> rp) override;
+            // void send(std::unique_ptr<ResultPackage> rp) override;
 
         protected:
             /**

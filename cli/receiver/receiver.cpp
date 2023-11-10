@@ -77,4 +77,22 @@ int remote_query(const CLP &cmd)
         APSI_LOG_WARNING("Failed to connect to " << conn_addr);
         return -1;
     }
+
+    unique_ptr<PSIParams> params;
+    try {
+        APSI_LOG_INFO("Sending parameter request");
+        params = make_unique<PSIParams>(Receiver::RequestParams(channel));
+        APSI_LOG_INFO("Received valid parameters");
+    } catch (const exception &ex) {
+        APSI_LOG_WARNING("Failed to receive valid parameters: " << ex.what());
+        return -1;
+    }
+}
+
+string get_conn_addr(const CLP &cmd)
+{
+    stringstream ss;
+    ss << "tcp://" << cmd.net_addr() << ":" << cmd.net_port();
+
+    return ss.str();
 }

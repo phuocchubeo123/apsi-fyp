@@ -37,5 +37,10 @@ namespace apsi {
                 throw invalid_argument("sender_db is not set");
             }
         }
+
+        void ZMQSenderDispatcher::run(const atomic<bool> &stop, int port)
+        {
+            ZMQSenderChannel chl;
+        }
     }
 }

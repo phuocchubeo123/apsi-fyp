@@ -87,7 +87,7 @@ namespace apsi {
                 const PSIParams &params)
             {
                 STOPWATCH(sender_stopwatch, "preprocess_unlabeled_data");
-                APSI_LOG_DEBUG(
+                APSI_LOG_INFO(
                     "Start preprocessing " << distance(begin, end) << " unlabeled items");
                 
                 // Some variables we'll need
@@ -297,7 +297,7 @@ namespace apsi {
         void SenderDB::insert_or_assign(const vector<Item> &data)
         {
             STOPWATCH(sender_stopwatch, "SenderDB::insert_or_assign (unlabeled)");
-            APSI_LOG_INFO("Start inserting " << data.size() << " items in SenderDB");
+            APSI_LOG_INFO("Start inserting " << data.size() << " items in SenderDB into" << params_.table_params().table_size << "bins.");
 
             vector<pair<Item, size_t>> data_with_indices =
                 preprocess_unlabeled_data(data.begin(), data.end(), params_);
