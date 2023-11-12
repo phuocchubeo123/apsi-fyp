@@ -199,6 +199,108 @@ namespace apsi {
             throw_if_not_connected();
 
             bool valid_context = context && context->parameters_set();
+
+            if (!valid_context && (expected == SenderOperationType::sop_unknown ||
+                                   expected == SenderOperationType::sop_query)) {
+                // Cannot receive unknown or query operations without a valid SEALContext
+                APSI_LOG_ERROR(
+                    "Cannot receive an operation of type "
+                    << sender_operation_type_str(expected)
+                    << "; SEALContext is missing or invalid");
+                return nullptr;
+            }
+
+            size_t old_bytes_received = bytes_received_;
+
+            multipart_t msg;
+            if (!receive_message(msg, wait_for_message)) {
+                // No message yet. Don't log anything.
+                return nullptr;
+            }
+
+            // Should have client_id, SenderOperationHeader, and SenderOperation.
+            if (msg.size() != 3) {
+                APSI_LOG_ERROR(
+                    "ZeroMQ received a message with " << msg.size()
+                                                      << " parts but expected 3 parts");
+                throw runtime_error("invalid message received");
+            }
+
+            // First extract the client_id; this is the first part of the message
+            vector<unsigned char> client_id = get_client_id(msg);
+
+            // Second part is the SenderOperationHeader
+            SenderOperationHeader sop_header;
+            try {
+                bytes_received_ += load_from_string(msg[1].to_string(), sop_header);
+            } catch (const runtime_error &) {
+                // Invalid header
+                APSI_LOG_ERROR("Failed to receive a valid header");
+                return nullptr;
+            }
+
+            if (!same_serialization_version(sop_header.version)) {
+                // Check that the serialization version numbers match
+                APSI_LOG_ERROR(
+                    "Received header indicates a serialization version number ("
+                    << sop_header.version
+                    << ") incompatible with the current serialization version number ("
+                    << apsi_serialization_version << ")");
+                return nullptr;
+            }
+
+            if (expected != SenderOperationType::sop_unknown && expected != sop_header.type) {
+                // Unexpected operation
+                APSI_LOG_ERROR(
+                    "Received header indicates an unexpected operation type "
+                    << sender_operation_type_str(sop_header.type));
+                return nullptr;
+            }
+
+            // Number of bytes received now
+            size_t bytes_received = 0;
+
+            // Return value
+            unique_ptr<SenderOperation> sop = nullptr;
+
+            try {
+                switch (static_cast<SenderOperationType>(sop_header.type)) {
+                case SenderOperationType::sop_parms:
+                    sop = make_unique<SenderOperationParms>();
+                    bytes_received = load_from_string(msg[2].to_string(), *sop);
+                    bytes_received_ += bytes_received;
+                    break;
+                case SenderOperationType::sop_query:
+                    sop = make_unique<SenderOperationQuery>();
+                    bytes_received = load_from_string(msg[2].to_string(), move(context), *sop);
+                    bytes_received_ += bytes_received;
+                    break;
+                default:
+                    // Invalid operation
+                    APSI_LOG_ERROR(
+                        "Received header indicates an invalid operation type "
+                        << sender_operation_type_str(sop_header.type));
+                    return nullptr;
+                }
+            } catch (const invalid_argument &ex) {
+                APSI_LOG_ERROR("An exception was thrown loading operation data: " << ex.what());
+                return nullptr;
+            } catch (const runtime_error &ex) {
+                APSI_LOG_ERROR("An exception was thrown loading operation data: " << ex.what());
+                return nullptr;
+            }
+
+            // Loaded successfully; set up ZMQSenderOperation package
+            auto n_sop = make_unique<ZMQSenderOperation>();
+            n_sop->client_id = move(client_id);
+            n_sop->sop = move(sop);
+
+            APSI_LOG_DEBUG(
+                "Received an operation of type " << sender_operation_type_str(sop_header.type)
+                                                 << " (" << bytes_received_ - old_bytes_received
+                                                 << " bytes)");
+
+            return n_sop;
         }
 
         void ZMQChannel::send(unique_ptr<SenderOperation> sop)
