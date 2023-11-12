@@ -97,27 +97,6 @@ namespace apsi {
         }; // class SenderOperationParms
 
         /**
-        A kind of SenderOperation for representing an OPRF query from the receiver.
-        */
-        class SenderOperationOPRF final : public SenderOperation {
-        public:
-            std::size_t save(std::ostream &out) const override;
-
-            std::size_t load(
-                std::istream &in, std::shared_ptr<seal::SEALContext> context = nullptr) override;
-
-            SenderOperationType type() const noexcept override
-            {
-                return SenderOperationType::sop_oprf;
-            }
-
-            /**
-            Holds the OPRF query data.
-            */
-            std::vector<unsigned char> data;
-        }; // class SenderOperationOPRF
-
-        /**
         A kind of SenderOperation for representing a PSI or labeled PSI query from the receiver.
         */
         class SenderOperationQuery final : public SenderOperation {

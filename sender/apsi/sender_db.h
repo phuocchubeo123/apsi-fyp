@@ -79,11 +79,6 @@ namespace apsi {
             oprf::OPRFKey strip();
 
             /**
-            Returns a copy of the OPRF key.
-            */
-            oprf::OPRFKey get_oprf_key() const;
-
-            /**
             Inserts the given data into the database. This function can be used only on a labeled
             SenderDB instance. If an item already exists in the database, its label is overwritten
             with the new label.

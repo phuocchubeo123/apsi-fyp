@@ -192,5 +192,193 @@ namespace apsi {
             // Ensure messages are not dropped
             socket->set(sockopt::sndhwm, 70000);
         }
+
+        unique_ptr<ZMQSenderOperation> ZMQChannel::receive_network_operation(
+            shared_ptr<SEALContext> context, bool wait_for_message, SenderOperationType expected)
+        {
+            throw_if_not_connected();
+
+            bool valid_context = context && context->parameters_set();
+        }
+
+        void ZMQChannel::send(unique_ptr<SenderOperation> sop)
+        {
+            throw_if_not_connected();
+
+            // Need to have the SenderOperation package
+            if (!sop) {
+                APSI_LOG_ERROR("Failed to send operation: operation data is missing");
+                throw invalid_argument("operation data is missing");
+            }
+
+            // Construct the header
+            SenderOperationHeader sop_header;
+            sop_header.type = sop->type();
+            APSI_LOG_DEBUG(
+                "Sending operation of type " << sender_operation_type_str(sop_header.type));
+
+            size_t bytes_sent = 0;
+
+            multipart_t msg;
+
+            bytes_sent += save_to_message(sop_header, msg);
+            bytes_sent += save_to_message(*sop, msg);
+
+            send_message(msg);
+            bytes_sent_ += bytes_sent;
+
+            APSI_LOG_DEBUG(
+                "Sent an operation of type " << sender_operation_type_str(sop_header.type) << " ("
+                                             << bytes_sent << " bytes)");
+        }
+
+        void ZMQChannel::send_message(multipart_t &msg)
+        {
+            lock_guard<mutex> lock(send_mutex_);
+
+            send_result_t result = send_multipart(*get_socket(), msg, send_flags::none);
+            bool sent = result.has_value();
+            if (!sent) {
+                throw runtime_error("failed to send message");
+            }
+        }
+
+        unique_ptr<SenderOperationResponse> ZMQChannel::receive_response(
+            SenderOperationType expected)
+        {
+            throw_if_not_connected();
+
+            size_t old_bytes_received = bytes_received_;
+
+            multipart_t msg;
+            if (!receive_message(msg)) {
+                // No message yet. Don't log anything.
+                return nullptr;
+            }
+
+            // Should have SenderOperationHeader and SenderOperationResponse.
+            if (msg.size() != 2) {
+                APSI_LOG_ERROR(
+                    "ZeroMQ received a message with " << msg.size()
+                                                      << " parts but expected 2 parts");
+                throw runtime_error("invalid message received");
+            }
+
+            // First part is the SenderOperationHeader
+            SenderOperationHeader sop_header;
+            try {
+                bytes_received_ += load_from_string(msg[0].to_string(), sop_header);
+            } catch (const runtime_error &) {
+                // Invalid header
+                APSI_LOG_ERROR("Failed to receive a valid header");
+                return nullptr;
+            }
+
+            if (!same_serialization_version(sop_header.version)) {
+                // Check that the serialization version numbers match
+                APSI_LOG_ERROR(
+                    "Received header indicates a serialization version number "
+                    << sop_header.version
+                    << " incompatible with the current serialization version number "
+                    << apsi_serialization_version);
+                return nullptr;
+            }
+
+            if (expected != SenderOperationType::sop_unknown && expected != sop_header.type) {
+                // Unexpected operation
+                APSI_LOG_ERROR(
+                    "Received header indicates an unexpected operation type "
+                    << sender_operation_type_str(sop_header.type));
+                return nullptr;
+            }
+
+            // Number of bytes received now
+            size_t bytes_received = 0;
+
+            // Return value
+            unique_ptr<SenderOperationResponse> sop_response = nullptr;
+
+            try {
+                switch (static_cast<SenderOperationType>(sop_header.type)) {
+                case SenderOperationType::sop_parms:
+                    sop_response = make_unique<SenderOperationResponseParms>();
+                    bytes_received = load_from_string(msg[1].to_string(), *sop_response);
+                    bytes_received_ += bytes_received;
+                    break;
+                case SenderOperationType::sop_query:
+                    sop_response = make_unique<SenderOperationResponseQuery>();
+                    bytes_received = load_from_string(msg[1].to_string(), *sop_response);
+                    bytes_received_ += bytes_received;
+                    break;
+                default:
+                    // Invalid operation
+                    APSI_LOG_ERROR(
+                        "Received header indicates an invalid operation type "
+                        << sender_operation_type_str(sop_header.type));
+                    return nullptr;
+                }
+            } catch (const runtime_error &ex) {
+                APSI_LOG_ERROR("An exception was thrown loading response data: " << ex.what());
+                return nullptr;
+            }
+
+            // Loaded successfully
+            APSI_LOG_DEBUG(
+                "Received a response of type " << sender_operation_type_str(sop_header.type) << " ("
+                                               << bytes_received_ - old_bytes_received
+                                               << " bytes)");
+
+            return sop_response;
+        }
+
+        void ZMQChannel::send(unique_ptr<ZMQSenderOperationResponse> sop_response)
+        {
+            throw_if_not_connected();
+
+            // Need to have the SenderOperationResponse package
+            if (!sop_response) {
+                APSI_LOG_ERROR("Failed to send response: response data is missing");
+                throw invalid_argument("response data is missing");
+            }
+
+            // Construct the header
+            SenderOperationHeader sop_header;
+            sop_header.type = sop_response->sop_response->type();
+            APSI_LOG_DEBUG(
+                "Sending response of type " << sender_operation_type_str(sop_header.type));
+
+            size_t bytes_sent = 0;
+
+            multipart_t msg;
+
+            // Add the client_id as the first part
+            save_to_message(sop_response->client_id, msg);
+
+            bytes_sent += save_to_message(sop_header, msg);
+            bytes_sent += save_to_message(*sop_response->sop_response, msg);
+
+            send_message(msg);
+            bytes_sent_ += bytes_sent;
+
+            APSI_LOG_DEBUG(
+                "Sent an operation of type " << sender_operation_type_str(sop_header.type) << " ("
+                                             << bytes_sent << " bytes)");
+        }
+
+        bool ZMQChannel::receive_message(multipart_t &msg, bool wait_for_message)
+        {
+            lock_guard<mutex> lock(receive_mutex_);
+
+            msg.clear();
+            recv_flags receive_flags = wait_for_message ? recv_flags::none : recv_flags::dontwait;
+
+            bool received = msg.recv(*get_socket(), static_cast<int>(receive_flags));
+            if (!received && wait_for_message) {
+                APSI_LOG_ERROR("ZeroMQ failed to receive a message")
+                throw runtime_error("failed to receive message");
+            }
+
+            return received;
+        }
     }
 }

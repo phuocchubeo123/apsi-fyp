@@ -8,10 +8,8 @@
 // APSI
 #include "apsi/log.h"
 #include "apsi/network/channel.h"
-#include "apsi/plaintext_powers.h"
 #include "apsi/receiver.h"
 #include "apsi/thread_pool_mgr.h"
-#include "apsi/util/db_encoding.h"
 #include "apsi/util/label_encryptor.h"
 #include "apsi/util/utils.h"
 
@@ -32,7 +30,6 @@ using namespace kuku;
 namespace apsi {
     using namespace util;
     using namespace network;
-    using namespace oprf;
 
     namespace {
         template <typename T>
@@ -70,6 +67,24 @@ namespace apsi {
         {
             // Create parameter request and send to Sender
             chl.send(CreateParamsRequest());
+
+            // Wait for a valid message of the right type
+            ParamsResponse response;
+            bool logged_waiting = false;
+
+            while (!(response = to_params_response(chl.receive_response()))) {
+                if (!logged_waiting) {
+                    // We want to log 'Waiting' only once, even if we have to wait for several
+                    // sleeps.
+                    logged_waiting = true;
+                    APSI_LOG_INFO("Waiting for response to parameter request");
+                }
+
+                this_thread::sleep_for(50ms);
+            }
+
+
+            return *response->params;
         }
     }
 }

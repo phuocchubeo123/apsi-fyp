@@ -187,5 +187,108 @@ namespace apsi {
 
             return fbs_builder.GetSize();
         }
-    }
-}
+
+        size_t SenderOperationQuery::load(istream &in, shared_ptr<SEALContext> context)
+        {
+            // The context must be set and valid for this operation
+            if (!context) {
+                throw invalid_argument("context cannot be null");
+            }
+            if (!context->parameters_set()) {
+                throw invalid_argument("context is invalid");
+            }
+
+            // Clear the current data
+            data.clear();
+
+            vector<unsigned char> in_data(util::read_from_stream(in));
+
+            auto verifier = flatbuffers::Verifier(
+                reinterpret_cast<const uint8_t *>(in_data.data()), in_data.size());
+            bool safe = fbs::VerifySizePrefixedSenderOperationBuffer(verifier);
+            if (!safe) {
+                throw runtime_error("failed to load SenderOperation: invalid buffer");
+            }
+
+            auto sop = fbs::GetSizePrefixedSenderOperation(in_data.data());
+
+            // Need to check that the operation is of the right type
+            if (sop->request_type() != fbs::Request_QueryRequest) {
+                throw runtime_error("unexpected operation type");
+            }
+
+            const auto &req = *sop->request_as_QueryRequest();
+
+            // Check the request's compression mode is supported
+            if (!Serialization::IsSupportedComprMode(req.compression_type())) {
+                throw runtime_error("unsupported compression mode");
+            }
+
+            compr_mode = static_cast<compr_mode_type>(req.compression_type());
+
+            // Load relin_keys if they are needed in this case
+            if (context->using_keyswitching()) {
+                // This is NOT a required field; check if it is present
+                if (!req.relin_keys()) {
+                    throw runtime_error("realinearization keys data is missing");
+                }
+
+                const auto &relin_keys_data = *req.relin_keys();
+                gsl::span<const unsigned char> relin_keys_data_span(
+                    reinterpret_cast<const unsigned char *>(relin_keys_data.data()),
+                    relin_keys_data.size());
+                try {
+                    relin_keys.load(context, relin_keys_data_span);
+                } catch (const logic_error &ex) {
+                    stringstream ss;
+                    ss << "failed to load relinearization keys: ";
+                    ss << ex.what();
+                    throw runtime_error(ss.str());
+                } catch (const runtime_error &ex) {
+                    stringstream ss;
+                    ss << "failed to load relinearization keys: ";
+                    ss << ex.what();
+                    throw runtime_error(ss.str());
+                }
+            }
+
+            // Load the query data; this is a required field so we can always dereference
+            const auto &query = *req.query();
+            for (const auto query_part : query) {
+                uint32_t exponent = query_part->exponent();
+                if (data.count(exponent)) {
+                    throw runtime_error("invalid query data");
+                }
+
+                // Load the ciphertext data; this is a required field so we can always dereference
+                const auto &cts = *query_part->cts();
+                vector<SEALObject<Ciphertext>> cts_vec;
+                cts_vec.reserve(cts.size());
+                for (const auto ct : cts) {
+                    gsl::span<const unsigned char> ct_span(
+                        reinterpret_cast<const unsigned char *>(ct->data()->data()),
+                        ct->data()->size());
+                    SEALObject<Ciphertext> temp;
+                    try {
+                        temp.load(context, ct_span);
+                    } catch (const logic_error &ex) {
+                        stringstream ss;
+                        ss << "failed to load query ciphertext: ";
+                        ss << ex.what();
+                        throw runtime_error(ss.str());
+                    } catch (const runtime_error &ex) {
+                        stringstream ss;
+                        ss << "failed to load query ciphertext: ";
+                        ss << ex.what();
+                        throw runtime_error(ss.str());
+                    }
+                    cts_vec.emplace_back(move(temp));
+                }
+
+                data.emplace(exponent, move(cts_vec));
+            }
+
+            return in_data.size();
+        }
+    } // namespace network
+} // namespace apsi

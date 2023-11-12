@@ -67,30 +67,6 @@ namespace apsi {
         }; // class SenderOperationResponseParms
 
         /**
-        A kind of SenderOperationResponse for representing a response to an OPRF query.
-        */
-        class SenderOperationResponseOPRF final : public SenderOperationResponse {
-        public:
-            SenderOperationResponseOPRF() = default;
-
-            ~SenderOperationResponseOPRF() = default;
-
-            std::size_t save(std::ostream &out) const override;
-
-            std::size_t load(std::istream &in) override;
-
-            SenderOperationType type() const noexcept override
-            {
-                return SenderOperationType::sop_oprf;
-            }
-
-            /**
-            Holds the OPRF query data.
-            */
-            std::vector<unsigned char> data;
-        }; // class SenderOperationResponseOPRF
-
-        /**
         A kind of SenderOperationResponse for representing a response to a PSI or labeled PSI query.
         */
         class SenderOperationResponseQuery final : public SenderOperationResponse {

@@ -23,11 +23,6 @@ namespace apsi {
     using ParamsRequest = std::unique_ptr<network::SenderOperationParms>;
 
     /**
-    A type representing a request to an OPRF request.
-    */
-    using OPRFRequest = std::unique_ptr<network::SenderOperationOPRF>;
-
-    /**
     A type representing a request to a query request.
     */
     using QueryRequest = std::unique_ptr<network::SenderOperationQuery>;
@@ -44,20 +39,6 @@ namespace apsi {
         if (request == nullptr || request->type() != apsi::network::SenderOperationType::sop_parms)
             return nullptr;
         return ParamsRequest(static_cast<apsi::network::SenderOperationParms *>(request.release()));
-    }
-
-    inline OPRFRequest to_oprf_request(Request &request)
-    {
-        if (request == nullptr || request->type() != apsi::network::SenderOperationType::sop_oprf)
-            return nullptr;
-        return OPRFRequest(static_cast<apsi::network::SenderOperationOPRF *>(request.release()));
-    }
-
-    inline OPRFRequest to_oprf_request(Request &&request)
-    {
-        if (request == nullptr || request->type() != apsi::network::SenderOperationType::sop_oprf)
-            return nullptr;
-        return OPRFRequest(static_cast<apsi::network::SenderOperationOPRF *>(request.release()));
     }
 
     inline QueryRequest to_query_request(Request &request)
@@ -82,16 +63,6 @@ namespace apsi {
     inline Request to_request(ParamsRequest &&params_request)
     {
         return Request(params_request.release());
-    }
-
-    inline Request to_request(OPRFRequest &oprf_request)
-    {
-        return Request(oprf_request.release());
-    }
-
-    inline Request to_request(OPRFRequest &&oprf_request)
-    {
-        return Request(oprf_request.release());
     }
 
     inline Request to_request(QueryRequest &query_request)

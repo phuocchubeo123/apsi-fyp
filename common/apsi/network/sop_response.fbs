@@ -1,1 +1,20 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 namespace apsi.network.fbs;
+
+table ParmsResponse {
+    data:[ubyte];
+}
+
+table QueryResponse {
+    package_count:uint32;
+}
+
+union Response { ParmsResponse, QueryResponse }
+
+table SenderOperationResponse {
+    response:Response (required);
+}
+
+root_type SenderOperationResponse;
