@@ -50,10 +50,10 @@ namespace apsi {
             return item_idx->second;
         }
 
-        // Receiver::Receiver(PSIParams params) : params_(move(params))
-        // {
-        //     initialize();
-        // }
+        Receiver::Receiver(PSIParams params) : params_(move(params))
+        {
+            initialize();
+        }
 
         unique_ptr<SenderOperation> Receiver::CreateParamsRequest()
         {
@@ -67,10 +67,13 @@ namespace apsi {
         {
             // Create parameter request and send to Sender
             chl.send(CreateParamsRequest());
+            APSI_LOG_INFO("Sent parameter request!")
 
             // Wait for a valid message of the right type
             ParamsResponse response;
             bool logged_waiting = false;
+
+            APSI_LOG_INFO("Waiting...")
 
             while (!(response = to_params_response(chl.receive_response()))) {
                 if (!logged_waiting) {
@@ -83,8 +86,128 @@ namespace apsi {
                 this_thread::sleep_for(50ms);
             }
 
+            APSI_LOG_INFO("Received parameter response!")
 
             return *response->params;
+        }
+
+        void Receiver::initialize()
+        {
+            APSI_LOG_INFO("PSI parameters set to: " << params_.to_string());
+
+            STOPWATCH(recv_stopwatch, "Receiver::initialize");
+
+            // Initialize the CryptoContext with a new SEALContext
+            crypto_context_ = CryptoContext(params_);
+
+            // Create new keys
+            reset_keys();
+        }
+
+        void Receiver::reset_keys()
+        {
+            // Generate new keys
+            KeyGenerator generator(*get_seal_context());
+
+            // Set the symmetric key, encryptor, and decryptor
+            crypto_context_.set_secret(generator.secret_key());
+
+            // Create Serializable<RelinKeys> and move to relin_keys_ for storage
+            relin_keys_.clear();
+            if (get_seal_context()->using_keyswitching()) {
+                Serializable<RelinKeys> relin_keys(generator.create_relin_keys());
+                relin_keys_.set(move(relin_keys));
+            }
+        }
+
+        vector<MatchRecord> Receiver::request_query(
+            const vector<Item> &items,
+            NetworkChannel &chl)
+        {
+            ThreadPoolMgr tpm;
+
+            // Create query and send to Sender
+            auto query = create_query(items);
+        }
+
+        pair<Request, IndexTranslationTable> Receiver::create_query(const vector<Item> &items)
+        {
+            APSI_LOG_INFO("Creating encrypted query for " << items.size() << " items");
+            STOPWATCH(recv_stopwatch, "Receiver::create_query");
+
+            IndexTranslationTable itt;
+            itt.item_count_ = items.size();
+
+            // Create the cuckoo table
+            KukuTable cuckoo(
+                params_.table_params().table_size,      // Size of the hash table
+                0,                                      // Not using a stash
+                params_.table_params().hash_func_count, // Number of hash functions
+                { 0, 0 },                               // Hardcoded { 0, 0 } as the seed
+                cuckoo_table_insert_attempts,           // The number of insertion attempts
+                { 0, 0 });                              // The empty element can be set to anything
+            {
+                STOPWATCH(recv_stopwatch, "Receiver::create_query::cuckoo_hashing");
+                APSI_LOG_INFO(
+                    "Inserting " << items.size() << " items into cuckoo table of size "
+                                 << cuckoo.table_size() << " with " << cuckoo.loc_func_count()
+                                 << " hash functions");
+
+                for (size_t item_idx = 0; item_idx < items.size(); item_idx++) {
+                    const auto &item = items[item_idx];
+                    if (!cuckoo.insert(item.get_as<kuku::item_type>().front())) {
+                        // Insertion can fail for two reasons:
+                        //
+                        //     (1) The item was already in the table, in which case the "leftover
+                        //     item" is empty; (2) Cuckoo hashing failed due to too small table or
+                        //     too few hash functions.
+                        //
+                        // In case (1) simply move on to the next item and log this issue. Case (2)
+                        // is a critical issue so we throw and exception.
+                        if (cuckoo.is_empty_item(cuckoo.leftover_item())) {
+                            APSI_LOG_INFO(
+                                "Skipping repeated insertion of items["
+                                << item_idx << "]: " << item.to_string());
+                        } else {
+                            APSI_LOG_ERROR(
+                                "Failed to insert items["
+                                << item_idx << "]: " << item.to_string()
+                                << "; cuckoo table fill-rate: " << cuckoo.fill_rate());
+                            throw runtime_error("failed to insert item into cuckoo table");
+                        }
+                    }
+                }
+                APSI_LOG_INFO(
+                    "Finished inserting items with "
+                    << cuckoo.loc_func_count()
+                    << " hash functions; cuckoo table fill-rate: " << cuckoo.fill_rate());
+            }
+
+            // Once the table is filled, fill the table_idx_to_item_idx map
+            for (size_t item_idx = 0; item_idx < items.size(); item_idx++) {
+                auto item_loc = cuckoo.query(items[item_idx].get_as<kuku::item_type>().front());
+                itt.table_idx_to_item_idx_[item_loc.location()] = item_idx;
+            }
+
+            APSI_LOG_INFO("Tables filled!");
+
+            {
+                STOPWATCH(recv_stopwatch, "Receiver::create_query::prepare_data");
+                for (uint32_t bundle_idx = 0; bundle_idx < params_.bundle_idx_count();
+                     bundle_idx++) {
+                    APSI_LOG_INFO("Preparing data for bundle index " << bundle_idx);
+
+                    // First, find the items for this bundle index
+                    gsl::span<const item_type> bundle_items(
+                        cuckoo.table().data() + bundle_idx * params_.receiver_bins_per_bundle(),
+                        params_.receiver_bins_per_bundle());
+
+                    vector<uint64_t> alg_items;
+                    for (auto &item : bundle_items) {
+                        APSI_LOG_INFO(cuckoo.query(item).location() << " " << bundle_idx);
+                    }
+                }
+            }
         }
     }
 }

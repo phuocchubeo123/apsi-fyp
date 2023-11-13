@@ -31,7 +31,11 @@ namespace apsi {
     {
         if (nullptr == response ||
             response->type() != apsi::network::SenderOperationType::sop_parms)
+            {
+            APSI_LOG_INFO("Received NULL params response!");
             return nullptr;
+            }
+        APSI_LOG_INFO("To_params_response");
         return ParamsResponse(
             static_cast<apsi::network::SenderOperationResponseParms *>(response.release()));
     }
@@ -40,7 +44,11 @@ namespace apsi {
     {
         if (nullptr == response ||
             response->type() != apsi::network::SenderOperationType::sop_parms)
+            {
+            APSI_LOG_INFO("Received NULL params response!");
             return nullptr;
+            }
+        APSI_LOG_INFO("To_params_response");
         return ParamsResponse(
             static_cast<apsi::network::SenderOperationResponseParms *>(response.release()));
     }

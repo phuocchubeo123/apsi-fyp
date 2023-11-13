@@ -30,7 +30,10 @@ namespace apsi {
     inline ParamsRequest to_params_request(Request &request)
     {
         if (request == nullptr || request->type() != apsi::network::SenderOperationType::sop_parms)
+            {
+            APSI_LOG_INFO("Requesting NULL params")
             return nullptr;
+            }
         return ParamsRequest(static_cast<apsi::network::SenderOperationParms *>(request.release()));
     }
 

@@ -143,7 +143,7 @@ namespace apsi {
         receiver_bins_per_bundle_ = table_params_.receiver_bins_per_bundle;
 
         // Compute the number of bundle indices; this is now guaranteed to be greater than zero
-        bundle_idx_count_ = table_params_.table_size / receiver_bins_per_bundle_;
+        bundle_idx_count_ = table_params_.table_size / table_params_.receiver_bins_per_bundle;
 
         item_bit_count_ = item_params_.item_bit_count;
     }
@@ -175,6 +175,7 @@ namespace apsi {
         fbs::PSIParamsBuilder psi_params_builder(fbs_builder);
         psi_params_builder.add_version(apsi_serialization_version);
         psi_params_builder.add_table_params(&table_params);
+        psi_params_builder.add_item_params(&item_params);
         psi_params_builder.add_seal_params(seal_params);
         auto psi_params = psi_params_builder.Finish();
         fbs_builder.FinishSizePrefixed(psi_params);
@@ -333,6 +334,9 @@ namespace apsi {
         ss << "; table_params.table_size: " << table_params_.table_size
            << "; table_params.max_items_per_bin: " << table_params_.max_items_per_bin
            << "; table_params.hash_func_count: " << table_params_.hash_func_count
+           << "; table_params.receiver_bins_per_bundle: " << table_params_.receiver_bins_per_bundle
+           << "; table_params.sender_bins_per_bundle: " << table_params_.sender_bins_per_bundle
+           << "; item_params.item_bit_count: " << item_params_.item_bit_count
            << "; seal_params.poly_modulus_degree: " << seal_params_.poly_modulus_degree()
            << "; seal_params.coeff_modulus: "
            << util::to_string(

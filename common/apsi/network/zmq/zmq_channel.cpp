@@ -376,6 +376,8 @@ namespace apsi {
                 return nullptr;
             }
 
+            APSI_LOG_INFO("Done loading sender operation header!");
+
             if (!same_serialization_version(sop_header.version)) {
                 // Check that the serialization version numbers match
                 APSI_LOG_ERROR(
@@ -394,18 +396,26 @@ namespace apsi {
                 return nullptr;
             }
 
+            APSI_LOG_INFO("Done checking sender operation header! Version: " << sop_header.version << " type: " << sender_operation_type_str(sop_header.type));
+
+
             // Number of bytes received now
             size_t bytes_received = 0;
 
             // Return value
             unique_ptr<SenderOperationResponse> sop_response = nullptr;
 
+            APSI_LOG_INFO("Begin loading response!");
+
             try {
                 switch (static_cast<SenderOperationType>(sop_header.type)) {
                 case SenderOperationType::sop_parms:
+                    APSI_LOG_INFO("Begin loading sender operation response parms")
                     sop_response = make_unique<SenderOperationResponseParms>();
+                    APSI_LOG_INFO("Loading sender operation response parms...")
                     bytes_received = load_from_string(msg[1].to_string(), *sop_response);
                     bytes_received_ += bytes_received;
+                    APSI_LOG_INFO("Done loading sender operation response parms")
                     break;
                 case SenderOperationType::sop_query:
                     sop_response = make_unique<SenderOperationResponseQuery>();
@@ -425,7 +435,7 @@ namespace apsi {
             }
 
             // Loaded successfully
-            APSI_LOG_DEBUG(
+            APSI_LOG_INFO(
                 "Received a response of type " << sender_operation_type_str(sop_header.type) << " ("
                                                << bytes_received_ - old_bytes_received
                                                << " bytes)");
@@ -446,7 +456,7 @@ namespace apsi {
             // Construct the header
             SenderOperationHeader sop_header;
             sop_header.type = sop_response->sop_response->type();
-            APSI_LOG_DEBUG(
+            APSI_LOG_INFO(
                 "Sending response of type " << sender_operation_type_str(sop_header.type));
 
             size_t bytes_sent = 0;
@@ -462,7 +472,7 @@ namespace apsi {
             send_message(msg);
             bytes_sent_ += bytes_sent;
 
-            APSI_LOG_DEBUG(
+            APSI_LOG_INFO(
                 "Sent an operation of type " << sender_operation_type_str(sop_header.type) << " ("
                                              << bytes_sent << " bytes)");
         }

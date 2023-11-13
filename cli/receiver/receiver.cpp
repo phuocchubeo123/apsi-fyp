@@ -87,6 +87,48 @@ int remote_query(const CLP &cmd)
         APSI_LOG_WARNING("Failed to receive valid parameters: " << ex.what());
         return -1;
     }
+
+    ThreadPoolMgr::SetThreadCount(cmd.threads());
+    APSI_LOG_INFO("Setting thread count to " << ThreadPoolMgr::GetThreadCount());
+
+    Receiver receiver(*params);
+
+    auto [query_data, orig_items] = load_db(cmd.query_file());
+    if (!query_data || !holds_alternative<CSVReader::UnlabeledData>(*query_data)) {
+        // Failed to read query file
+        APSI_LOG_ERROR("Failed to read query file: terminating");
+        return -1;
+    }
+
+    auto &items = get<CSVReader::UnlabeledData>(*query_data);
+    vector<Item> items_vec(items.begin(), items.end());
+
+    vector<MatchRecord> query_result;
+    try {
+        APSI_LOG_INFO("Sending APSI query");
+        query_result = receiver.request_query(items_vec, channel);
+        APSI_LOG_INFO("Received APSI query response");
+    } catch (const exception &ex) {
+        APSI_LOG_WARNING("Failed sending APSI query: " << ex.what());
+        return -1;
+    }
+
+    return 0;
+}
+
+pair<unique_ptr<CSVReader::DBData>, vector<string>> load_db(const string &db_file)
+{
+    CSVReader::DBData db_data;
+    vector<string> orig_items;
+    try {
+        CSVReader reader(db_file);
+        tie(db_data, orig_items) = reader.read();
+    } catch (const exception &ex) {
+        APSI_LOG_WARNING("Could not open or read file `" << db_file << "`: " << ex.what());
+        return { nullptr, orig_items };
+    }
+
+    return { make_unique<CSVReader::DBData>(move(db_data)), move(orig_items) };
 }
 
 string get_conn_addr(const CLP &cmd)

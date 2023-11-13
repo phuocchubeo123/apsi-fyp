@@ -88,8 +88,7 @@ namespace apsi {
             `label` field may contain the corresponding label if a sender's data included it.
             */
             std::vector<MatchRecord> request_query(
-                const std::vector<HashedItem> &items,
-                const std::vector<LabelKey> &label_keys,
+                const std::vector<Item> &items,
                 network::NetworkChannel &chl);
 
             static Request CreateParamsRequest();
@@ -102,7 +101,7 @@ namespace apsi {
             Receiver::process_result_part function to sort the results in the correct order.
             */
             std::pair<Request, IndexTranslationTable> create_query(
-                const std::vector<HashedItem> &items);
+                const std::vector<Item> &items);
 
             /**
             Processes a ResultPart object and returns a vector of MatchRecords in the same order as

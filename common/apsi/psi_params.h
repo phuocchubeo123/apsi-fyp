@@ -36,7 +36,7 @@ namespace apsi{
         */
         class SEALParams : public seal::EncryptionParameters {
         public:
-            SEALParams() : seal::EncryptionParameters(seal::scheme_type::bgv)
+            SEALParams() : seal::EncryptionParameters(seal::scheme_type::bfv)
             {}
         };
 
