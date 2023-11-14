@@ -118,7 +118,7 @@ namespace apsi {
             Holds the encrypted query data. In the map the key labels the exponent of the query
             ciphertext and the vector holds the ciphertext data for different bundle indices.
             */
-            std::unordered_map<std::uint32_t, std::vector<SEALObject<seal::Ciphertext>>> data;
+            std::unordered_map<uint32_t, std::vector<SEALObject<seal::Ciphertext>>> data;
         }; // class SenderOperationQuery
     }      // namespace network
 } // namespace apsi

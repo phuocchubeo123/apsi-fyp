@@ -93,6 +93,11 @@ namespace apsi{
             return table_params_;
         }
 
+        const ItemParams &item_params() const
+        {
+            return item_params_;
+        }
+
         const SEALParams &seal_params() const
         {
             return seal_params_;

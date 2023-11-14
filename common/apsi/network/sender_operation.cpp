@@ -31,9 +31,6 @@ namespace apsi {
             case SenderOperationType::sop_parms:
                 return "sop_parms";
 
-            case SenderOperationType::sop_oprf:
-                return "sop_oprf";
-
             case SenderOperationType::sop_query:
                 return "sop_query";
 
@@ -162,7 +159,7 @@ namespace apsi {
                         return ret_inner;
                     }());
 
-                    // For each exponent, create a QueryRequestPart
+                    // For each bit index, create a QueryRequestPart
                     auto query_req_part = fbs::CreateQueryRequestPart(fbs_builder, q.first, cts);
                     ret.push_back(query_req_part);
                 }

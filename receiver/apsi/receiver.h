@@ -16,6 +16,7 @@
 #include "apsi/crypto_context.h"
 #include "apsi/item.h"
 #include "apsi/itt.h"
+#include "apsi/plaintext_bits.h"
 #include "apsi/match_record.h"
 #include "apsi/network/channel.h"
 #include "apsi/network/network_channel.h"

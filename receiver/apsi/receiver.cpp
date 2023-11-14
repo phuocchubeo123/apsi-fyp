@@ -44,7 +44,7 @@ namespace apsi {
         {
             auto item_idx = table_idx_to_item_idx_.find(table_idx);
             if (item_idx == table_idx_to_item_idx_.cend()) {
-                return item_count();
+                return 0;
             }
 
             return item_idx->second;
@@ -128,6 +128,12 @@ namespace apsi {
 
             // Create query and send to Sender
             auto query = create_query(items);
+            chl.send(move(query.first));
+            auto itt = move(query.second);
+
+            // Wait for query response
+            QueryResponse response;
+            bool logged_waiting = false;
         }
 
         pair<Request, IndexTranslationTable> Receiver::create_query(const vector<Item> &items)
@@ -190,24 +196,48 @@ namespace apsi {
             }
 
             APSI_LOG_INFO("Tables filled!");
+            vector<PlaintextBits> plaintext_bits;
 
             {
                 STOPWATCH(recv_stopwatch, "Receiver::create_query::prepare_data");
                 for (uint32_t bundle_idx = 0; bundle_idx < params_.bundle_idx_count();
                      bundle_idx++) {
-                    APSI_LOG_INFO("Preparing data for bundle index " << bundle_idx);
+                    vector<Item> bundle_items;
+                    for (int bin_idx = 0; bin_idx < params_.receiver_bins_per_bundle(); bin_idx++){
+                        bundle_items.push_back(items[itt.find_item_idx(bundle_idx * params_.receiver_bins_per_bundle() + bin_idx)]);
+                    }
+                    plaintext_bits.emplace_back(move(bundle_items), params_);
+                }
+            }
 
-                    // First, find the items for this bundle index
-                    gsl::span<const item_type> bundle_items(
-                        cuckoo.table().data() + bundle_idx * params_.receiver_bins_per_bundle(),
-                        params_.receiver_bins_per_bundle());
+            unordered_map<uint32_t, vector<SEALObject<Ciphertext>>> encrypted_bits;
+            // encrypt_data
+            {
+                STOPWATCH(recv_stopwatch, "Receiver::create_query::encrypt_data");
+                for (uint32_t bundle_idx = 0; bundle_idx < params_.bundle_idx_count();
+                     bundle_idx++) {
+                    APSI_LOG_INFO("Encoding and encrypting data for bundle index " << bundle_idx);
 
-                    vector<uint64_t> alg_items;
-                    for (auto &item : bundle_items) {
-                        APSI_LOG_INFO(cuckoo.query(item).location() << " " << bundle_idx);
+                    // Encrypt the data for this power
+                    auto encrypted_bit(plaintext_bits[bundle_idx].encrypt(crypto_context_));
+
+                    // Move the encrypted data to encrypted_powers
+                    for (auto &e: encrypted_bit){
+                        encrypted_bits[e.first].emplace_back(move(e.second));
                     }
                 }
             }
+
+            // Set up the return value
+            auto sop_query = make_unique<SenderOperationQuery>();
+            sop_query->compr_mode = Serialization::compr_mode_default;
+            sop_query->relin_keys = relin_keys_;
+            sop_query->data = move(encrypted_bits);
+            auto sop = to_request(move(sop_query));
+
+            APSI_LOG_INFO("Finished creating encrypted query");
+
+            return { move(sop), itt };
         }
     }
 }

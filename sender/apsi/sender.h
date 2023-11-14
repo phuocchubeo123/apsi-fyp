@@ -98,13 +98,11 @@ namespace apsi {
             /**
             Generate and send a response to a query.
             */
-            // static void RunQuery(
-            //     const Query &query,
-            //     network::Channel &chl,
-            //     std::function<void(network::Channel &, Response)> send_fun =
-            //         BasicSend<Response::element_type>,
-            //     std::function<void(network::Channel &, ResultPart)> send_rp_fun =
-            //         BasicSend<ResultPart::element_type>);
+            static void RunQuery(
+                const Query &query,
+                network::Channel &chl,
+                std::function<void(network::Channel &, Response)> send_fun,
+                std::function<void(network::Channel &, ResultPart)> send_rp_fun);
 
         private:
             /**
