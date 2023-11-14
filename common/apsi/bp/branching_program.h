@@ -5,21 +5,11 @@
 
 // APSI
 #include "apsi/item.h"
+#include "apsi/crypto_context.h"
 
 namespace apsi{
     struct BP{  
     public:
-        int numNodes;
-        int numLeaves;
-
-        std::vector<int> id;
-
-        std::vector<int> leftChild;
-        std::vector<int> rightChild;
-        std::vector<int> parent;
-        std::vector<int> level;
-        std::vector<int> isLeaf;
-
         /*
             Initialize binary tree.
             This tree is implemented in an array-like structure. 
@@ -27,7 +17,28 @@ namespace apsi{
         */
         BP();
 
+        BP(const CryptoContext &crypto_context);
+
+        void clear();
+
         int addChildNode(int parentNode);
         int32_t addItem(const Item& item);
+
+        seal::Ciphertext eval(
+                const std::vector<seal::Ciphertext> &ciphertext_bits,
+                seal::MemoryPoolHandle &pool) const;
+    
+    private:
+        int nodes_count_;
+        int leaves_count_;
+
+        std::vector<int> id;
+        std::vector<int> left_child_;
+        std::vector<int> right_child_;
+        std::vector<int> parent_;
+        std::vector<int> level_;
+        std::vector<int> is_leaf_;
+
+        CryptoContext crypto_context_;
     }; 
 }

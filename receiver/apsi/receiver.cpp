@@ -134,6 +134,30 @@ namespace apsi {
             // Wait for query response
             QueryResponse response;
             bool logged_waiting = false;
+
+            while (!(response = to_query_response(chl.receive_response()))) {
+                if (!logged_waiting) {
+                    // We want to log 'Waiting' only once, even if we have to wait for several
+                    // sleeps.
+                    logged_waiting = true;
+                    APSI_LOG_INFO("Waiting for response to query request");
+                }
+
+                this_thread::sleep_for(50ms);
+            }
+
+            // Set up the result
+            vector<MatchRecord> mrs(query.second.item_count());
+
+            // Get the number of ResultPackages we expect to receive
+            atomic<uint32_t> package_count{ response->package_count };
+
+            // Launch threads to receive ResultPackages and decrypt results
+            size_t task_count = min<size_t>(ThreadPoolMgr::GetThreadCount(), package_count);
+            vector<future<void>> futures(task_count);
+            APSI_LOG_INFO(
+                "Launching " << task_count << " result worker tasks to handle " << package_count
+                             << " result parts");
         }
 
         pair<Request, IndexTranslationTable> Receiver::create_query(const vector<Item> &items)

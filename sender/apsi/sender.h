@@ -24,7 +24,7 @@ namespace apsi {
     namespace sender {
         // An alias to denote the powers of a receiver's ciphertext. At index i, holds Cⁱ, where C
         // is the ciphertext. The 0th index is always a dummy value.
-        using CiphertextPowers = std::vector<seal::Ciphertext>;
+        using CiphertextBits = std::vector<seal::Ciphertext>;
 
         /**
         The Sender class implements all necessary functions to process and respond to parameter,
@@ -106,19 +106,18 @@ namespace apsi {
 
         private:
             /**
-            Method that processes a single Bin Bundle cache.
+            Method that processes a single Bin Bundle.
             Sends a result package through the given channel.
             */
-            // static void ProcessBinBundleCache(
-            //     const std::shared_ptr<SenderDB> &sender_db,
-            //     const CryptoContext &crypto_context,
-            //     std::reference_wrapper<const BinBundleCache> cache,
-            //     std::vector<CiphertextPowers> &all_powers,
-            //     network::Channel &chl,
-            //     std::function<void(network::Channel &, ResultPart)> send_rp_fun,
-            //     std::uint32_t bundle_idx,
-            //     seal::compr_mode_type compr_mode,
-            //     seal::MemoryPoolHandle &pool);
+            static void ProcessBinBundle(
+                const std::shared_ptr<SenderDB> &sender_db,
+                const CryptoContext &crypto_context,
+                std::vector<CiphertextBits> &all_bits,
+                network::Channel &chl,
+                std::function<void(network::Channel &, ResultPart)> send_rp_fun,
+                std::uint32_t bundle_idx,
+                seal::compr_mode_type compr_mode,
+                seal::MemoryPoolHandle &pool);
         }; // class Sender
     }      // namespace sender
 } // namespace apsi

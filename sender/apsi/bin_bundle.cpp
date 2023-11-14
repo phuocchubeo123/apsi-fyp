@@ -21,7 +21,16 @@ namespace apsi {
     using namespace seal::util;
     using namespace util;
     namespace sender{
-        BinBundle::BinBundle(): bp_()
+        BinBundle::BinBundle(): 
+            bp_()
+        {
+            // Set up internal data structures
+            clear();
+        }
+
+        BinBundle::BinBundle(const CryptoContext &crypto_context): 
+            crypto_context_ (crypto_context), 
+            bp_(crypto_context)
         {
             // Set up internal data structures
             clear();

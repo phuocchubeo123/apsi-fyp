@@ -156,7 +156,7 @@ namespace apsi {
             sender is expected to manually read the client identifier from the received
             ZMQSenderOperation and use the same client identifier in the ZMQResultPackage.
             */
-            // virtual void send(std::unique_ptr<ZMQResultPackage> rp);
+            virtual void send(std::unique_ptr<ZMQResultPackage> rp);
 
             /**
             Receive a ResultPackage from a sender. A valid seal::SEALContext must be provided. The

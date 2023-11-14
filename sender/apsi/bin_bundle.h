@@ -33,6 +33,8 @@ namespace apsi {
         public:
             BinBundle();
 
+            BinBundle(const CryptoContext &crypto_context);
+
             BinBundle(const BinBundle &copy) = delete;
 
             BinBundle(BinBundle &&source) = default;

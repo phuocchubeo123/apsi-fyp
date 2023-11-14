@@ -241,7 +241,9 @@ namespace apsi {
 
             // Clear the BinBundles
             bin_bundles_.clear();
-            bin_bundles_.resize(params_.bundle_idx_count());
+            for (int idx = 0; idx < params_.bundle_idx_count(); idx++){
+                bin_bundles_.push_back(BinBundle(crypto_context_));
+            }
 
             // Reset the SenderDB data structures
             clear();
@@ -320,6 +322,15 @@ namespace apsi {
                 item_count_ += bundle.get_bundle_size();
             }
             // APSI_LOG_INFO("");
+        }
+
+        size_t SenderDB::get_bin_bundle_count() const
+        {
+            // Lock the database for reading
+            auto lock = get_reader_lock();
+
+            // Compute the total number of BinBundles
+            return bin_bundles_.size();
         }
     }
 }

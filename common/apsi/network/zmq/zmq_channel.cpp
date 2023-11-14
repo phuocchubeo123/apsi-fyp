@@ -492,5 +492,32 @@ namespace apsi {
 
             return received;
         }
+
+        void ZMQChannel::send(unique_ptr<ZMQResultPackage> rp)
+        {
+            throw_if_not_connected();
+
+            // Need to have the ResultPackage
+            if (!rp) {
+                APSI_LOG_ERROR("Failed to send result package: result package data is missing");
+                throw invalid_argument("result package data is missing");
+            }
+
+            APSI_LOG_INFO(
+                "Sending result package ("
+                << "has matching data: " << (rp->rp->psi_result ? "yes" : "no") << "; ");
+
+            multipart_t msg;
+
+            // Add the client_id as the first part
+            save_to_message(rp->client_id, msg);
+
+            size_t bytes_sent = save_to_message(*rp->rp, msg);
+
+            send_message(msg);
+            bytes_sent_ += bytes_sent;
+
+            APSI_LOG_INFO("Sent a result package (" << bytes_sent << " bytes)");
+        }
     }
 }

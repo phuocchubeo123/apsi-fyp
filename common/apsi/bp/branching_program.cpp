@@ -2,50 +2,102 @@
 
 using namespace std;
 using namespace apsi;
+using namespace seal;
 
 namespace apsi{
-    BP::BP(): numNodes(0), numLeaves(0){
-        id.push_back(numNodes++);
-
-        leftChild.push_back(-1);
-        rightChild.push_back(-1);
-        parent.push_back(-1);
-        level.push_back(0);
-        isLeaf.push_back(0);
+    BP::BP(): nodes_count_(1), leaves_count_(0){
+        clear();
     }
 
-    int BP::addChildNode(int parentNode){
-        id.push_back(numNodes++);
-
-        leftChild.push_back(-1);
-        rightChild.push_back(-1);
-        parent.push_back(parentNode);
-        level.push_back(level[parentNode] + 1);
-
-        return numNodes-1;
+    BP::BP(const CryptoContext &crypto_context): 
+        nodes_count_(1), leaves_count_(0), crypto_context_(crypto_context);
+    {
+        clear();
     }
 
+    void BP::clear(){
+        id.clear(); id.push_back(0);
+        left_child_.clear(); left_child_.push_back(-1);
+        right_child_.clear(); right_child_.push_back(-1);
+        parent_.clear(); parent_.push_back(-1);
+        level_.clear(); level_.push_back(-1);
+        is_leaf_.clear(); is_leaf_.push_back(0);
+    }
+
+    int BP::addChildNode(int parent_node){
+        id.push_back(nodes_count_++);
+
+        left_child_.push_back(-1);
+        right_child_.push_back(-1);
+        parent_.push_back(parent_node);
+        level_.push_back(level_[parent_node] + 1);
+        is_leaf_.push_back(0);
+
+        return nodes_count_-1;
+    }
 
     int32_t BP::addItem(const Item &item){
-        int currentNode = 0;
+        int cur = 0;
         for (int bit = 0; bit < item.get_length(); bit++){
             if (item.get_bit(bit) == 0){
-                if (leftChild[currentNode] == -1){
-                    leftChild[currentNode] = addChildNode(currentNode);
+                if (left_child_[cur] == -1){
+                    left_child_[cur] = addChildNode(cur);
                 }
-                currentNode = leftChild[currentNode];
+                cur = left_child_[cur];
             }
-            else{
-                if (rightChild[currentNode] == -1){
-                    rightChild[currentNode] = addChildNode(currentNode);
+            else {
+                if (right_child_[cur] == -1){
+                    right_child_[cur] = addChildNode(cur);
                 }
-                currentNode = rightChild[currentNode];
+                cur = right_child_[cur];
             }
         }
-        if (currentNode == numNodes-1) numLeaves++;
-        return numLeaves;
+        is_leaf_[cur] = 1;
+        if (cur == nodes_count_-1) leaves_count_++;
+        return leaves_count_;
+    }
+
+    void BP::eval(
+        vector<Ciphertext> &ciphertext_bits, 
+        MemoryPoolHandle &pool) const
+        {
+    #ifdef SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT
+            static_assert(
+                false, "SEAL must be built with SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT=OFF");
+    #endif
+        auto seal_context = crypto_context_.seal_context();
+        auto evaluator = crypto_context_.evaluator();
+
+        uint32_t depth = ciphertext_bits.size();
+        queue<int> node_queue;
+        node_queue.push(0);
+
+        vector<vector<Ciphertext>> path_costs(depth+1);
+        for (int d = 0; d < depth; d++){
+            int uint32_t max_sub_path;
+            for (int l = 0; (((d+1) >> l) << l) == d+1; l++) max_sub_path = l;
+            path_costs[d].resize(max_sub_path);
+        }
+
+        while (!nodeQueue.empty()){
+            int cur = node_queue.front();
+            node_queue.pop();
+
+            if (cur > 0){
+                long side = (leftChild[parent[cur]] == cur) ? 0 : 1;
+                Plaintext plain_addend(-side);
+                path_costs[level[cur]][0] = ciphertext_bits[level[cur]];
+                evaluator.sub_inplace(path_costs[level[cur]][0], plain_addend);
+                evaluator.square(path_costs[level[cur]][0]);
+            }
+
+            if (left_child_[cur] != -1) node_queue.push(left_child_[cur]);
+            if (right_child_[cur] != -1) node_queue.push(right_child_[cur]);
+        }
     }
 }
+
+
 
 // void BranchingProgram::resetCost(){
 //     queue<int> nodeQueue;
@@ -59,25 +111,6 @@ namespace apsi{
 
 //             nodeQueue.push(rightChild[currentNode]);
 //         }
-//     }
-// }
-
-// void BranchingProgram::evaluate(vector<helib::Ctxt> ctxts){
-//     queue<int> nodeQueue;
-//     nodeQueue.push(0);
-//     while (!nodeQueue.empty()){
-//         int currentNode = nodeQueue.front();
-//         nodeQueue.pop();
-
-//         if (nodeLabel[currentNode] != -1) continue;
-
-//         cost[leftChild[currentNode]] += ctxts[level[currentNode]];
-//         cost[leftChild[currentNode]] += 1l;
-//         nodeQueue.push(leftChild[currentNode]);
-
-//         cost[rightChild[currentNode]] += ctxts[level[currentNode]];
-//         cost[rightChild[currentNode]] += 1l;
-//         nodeQueue.push(rightChild[currentNode]);
 //     }
 // }
 
