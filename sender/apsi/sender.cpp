@@ -96,6 +96,9 @@ namespace apsi {
             CryptoContext crypto_context(sender_db->get_crypto_context());
             crypto_context.set_evaluator(query.relin_keys());
 
+            APSI_LOG_INFO("Crypto context slot count when processing query:");
+            APSI_LOG_INFO(crypto_context.encoder()->slot_count());
+
             // Get the PSIParams
             PSIParams params(sender_db->get_params());
 
@@ -141,6 +144,7 @@ namespace apsi {
                     ProcessBinBundle(
                         sender_db,
                         crypto_context,
+                        sender_db->get_bin_bundle(bundle_idx),
                         all_bits,
                         chl,
                         send_rp_fun,
@@ -177,8 +181,13 @@ namespace apsi {
 
             rp->bundle_idx = bundle_idx;
 
-            const BP &branching_prog = bundle.get().bp_;
+            const BP &branching_prog = bundle.get().bp();
 
-            rp->psi_result = branching_prof.eval(all_bits[bundle_idx], pool);
+            APSI_LOG_INFO("Evaluating branching program with " << all_bits[bundle_idx].size() << " bits");
+
+            rp->psi_result = branching_prog.eval(all_bits[bundle_idx], pool);
+
+            APSI_LOG_INFO("Done evaluating branching program")
+        }
     }
 }

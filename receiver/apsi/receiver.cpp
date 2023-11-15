@@ -158,6 +158,22 @@ namespace apsi {
             APSI_LOG_INFO(
                 "Launching " << task_count << " result worker tasks to handle " << package_count
                              << " result parts");
+
+            for (size_t t = 0; t < task_count; t++) {
+                futures[t] = tpm.thread_pool().enqueue(
+                    [&]() { process_result_worker(package_count, mrs, itt, chl); });
+            }
+
+            for (auto &f : futures) {
+                f.get();
+            }
+
+            APSI_LOG_INFO(
+                "Found " << accumulate(mrs.begin(), mrs.end(), 0, [](auto acc, auto &curr) {
+                    return acc + curr.found;
+                }) << " matches");
+
+            return mrs;
         }
 
         pair<Request, IndexTranslationTable> Receiver::create_query(const vector<Item> &items)
@@ -262,6 +278,68 @@ namespace apsi {
             APSI_LOG_INFO("Finished creating encrypted query");
 
             return { move(sop), itt };
+        }
+
+        void Receiver::process_result_worker(
+            atomic<uint32_t> &package_count,
+            vector<MatchRecord> &mrs,
+            const IndexTranslationTable &itt,
+            Channel &chl) const
+        {
+            stringstream sw_ss;
+            sw_ss << "Receiver::process_result_worker [" << this_thread::get_id() << "]";
+            STOPWATCH(recv_stopwatch, sw_ss.str());
+
+            APSI_LOG_INFO("Result worker [" << this_thread::get_id() << "]: starting");
+
+            auto seal_context = get_seal_context();
+
+            while (true) {
+                // Return if all packages have been claimed
+                uint32_t curr_package_count = package_count;
+                if (curr_package_count == 0) {
+                    APSI_LOG_DEBUG(
+                        "Result worker [" << this_thread::get_id()
+                                          << "]: all packages claimed; exiting");
+                    return;
+                }
+
+                // If there has been no change to package_count, then decrement atomically
+                if (!package_count.compare_exchange_strong(
+                        curr_package_count, curr_package_count - 1)) {
+                    continue;
+                }
+
+                // Wait for a valid ResultPart
+                ResultPart result_part;
+                while (!(result_part = chl.receive_result(seal_context)))
+                    ;
+
+                // Process the ResultPart to get the corresponding vector of MatchRecords
+                auto this_mrs = process_result_part(itt, result_part);
+            }
+        }
+
+        vector<MatchRecord> Receiver::process_result_part(
+            const IndexTranslationTable &itt,
+            const ResultPart &result_part) const
+        {
+            STOPWATCH(recv_stopwatch, "Receiver::process_result_part");
+
+            if (!result_part) {
+                APSI_LOG_ERROR("Failed to process result: result_part is null");
+                return {};
+            }
+        }
+
+        vector<MatchRecord> Receiver::process_result(
+            const IndexTranslationTable &itt,
+            const vector<ResultPart> &result) const
+        {
+            APSI_LOG_INFO("Processing " << result.size() << " result parts");
+            STOPWATCH(recv_stopwatch, "Receiver::process_result");
+
+            vector<MatchRecord> mrs(itt.item_count());
         }
     }
 }

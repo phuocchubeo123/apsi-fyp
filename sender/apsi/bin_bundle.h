@@ -64,6 +64,11 @@ namespace apsi {
                 return bundle_size_;
             }
 
+            const apsi::BP &bp() const
+            {
+                return bp_;
+            }
+
         private:
             /**
             We need this to make Plaintexts

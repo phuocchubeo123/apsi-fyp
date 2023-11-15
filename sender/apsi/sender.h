@@ -112,6 +112,7 @@ namespace apsi {
             static void ProcessBinBundle(
                 const std::shared_ptr<SenderDB> &sender_db,
                 const CryptoContext &crypto_context,
+                std::reference_wrapper<const BinBundle> bundle,
                 std::vector<CiphertextBits> &all_bits,
                 network::Channel &chl,
                 std::function<void(network::Channel &, ResultPart)> send_rp_fun,

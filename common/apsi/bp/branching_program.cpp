@@ -10,7 +10,7 @@ namespace apsi{
     }
 
     BP::BP(const CryptoContext &crypto_context): 
-        nodes_count_(1), leaves_count_(0), crypto_context_(crypto_context);
+        nodes_count_(1), leaves_count_(0), crypto_context_(crypto_context)
     {
         clear();
     }
@@ -54,11 +54,12 @@ namespace apsi{
         }
         is_leaf_[cur] = 1;
         if (cur == nodes_count_-1) leaves_count_++;
+        APSI_LOG_INFO(leaves_count_ << " " << nodes_count_ << " " << left_child_[0] << " " << right_child_[0]);
         return leaves_count_;
     }
 
-    void BP::eval(
-        vector<Ciphertext> &ciphertext_bits, 
+    Ciphertext BP::eval(
+        const vector<Ciphertext> &ciphertext_bits, 
         MemoryPoolHandle &pool) const
         {
     #ifdef SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT
@@ -67,33 +68,84 @@ namespace apsi{
     #endif
         auto seal_context = crypto_context_.seal_context();
         auto evaluator = crypto_context_.evaluator();
+        auto relin_keys = crypto_context_.relin_keys();
 
-        uint32_t depth = ciphertext_bits.size();
-        queue<int> node_queue;
-        node_queue.push(0);
+        vector<uint64_t> zero_const(crypto_context_.encoder()->slot_count(), 0);
+        vector<uint64_t> one_const(crypto_context_.encoder()->slot_count(), 1);
 
-        vector<vector<Ciphertext>> path_costs(depth+1);
-        for (int d = 0; d < depth; d++){
-            int uint32_t max_sub_path;
-            for (int l = 0; (((d+1) >> l) << l) == d+1; l++) max_sub_path = l;
-            path_costs[d].resize(max_sub_path);
+        Plaintext tot_ptx;
+        crypto_context_.encoder()->encode(zero_const, tot_ptx);
+
+        Ciphertext tot_ctx;
+
+        Plaintext zero_ptx;
+        crypto_context_.encoder()->encode(zero_const, zero_ptx);
+
+        Plaintext one_ptx;
+        crypto_context_.encoder()->encode(one_const, zero_ptx);
+
+        if (nodes_count_ == 1){
+            APSI_LOG_INFO("Empty BP");
+            Ciphertext cost = ciphertext_bits[0];
+            evaluator->multiply_plain_inplace(cost, zero_ptx);
+            evaluator->relinearize_inplace(cost, *relin_keys, pool);
+            return cost;
         }
 
-        while (!nodeQueue.empty()){
+        uint32_t depth = ciphertext_bits.size();
+        vector<vector<Ciphertext>> path_costs(depth+1);
+        for (int d = 0; d < depth; d++){
+            uint32_t max_sub_path;
+            for (int l = 0; (((d+1) >> l) << l) == d+1; l++) max_sub_path = l;
+            path_costs[d].resize(max_sub_path + 1);
+            APSI_LOG_INFO("Num paths: " << d << " " << max_sub_path + 1);
+        }
+
+
+        queue<int> node_queue;
+        node_queue.push(0);
+        bool met_leaf = false;
+
+        while (!node_queue.empty()){
             int cur = node_queue.front();
             node_queue.pop();
 
+            int level = level_[cur];
+
+            APSI_LOG_INFO("Processing node " << cur << " at level " << level);
+
             if (cur > 0){
-                long side = (leftChild[parent[cur]] == cur) ? 0 : 1;
-                Plaintext plain_addend(-side);
-                path_costs[level[cur]][0] = ciphertext_bits[level[cur]];
-                evaluator.sub_inplace(path_costs[level[cur]][0], plain_addend);
-                evaluator.square(path_costs[level[cur]][0]);
+                bool side = (left_child_[parent_[cur]] == cur) ? 0 : 1;
+                APSI_LOG_INFO("Side: " << side);
+
+                APSI_LOG_INFO("Set path cost, recall that there are " << path_costs[level].size() << " costs to calculate");
+                path_costs[level][0] = ciphertext_bits[level];
+                evaluator->sub_plain_inplace(path_costs[level][0], (side == 1) ? zero_ptx : one_ptx);
+
+                APSI_LOG_INFO("Subtracted");
+                evaluator->square_inplace(path_costs[level][0], pool);
+                evaluator->relinearize_inplace(path_costs[level][0], *relin_keys, pool);
+
+                for (int l = 1; l < path_costs[level].size(); l++){
+                    path_costs[level][l] = path_costs[level-(1<<(l-1))][l-1];
+                    evaluator->multiply_inplace(path_costs[level][l], path_costs[level][l-1]);
+                    evaluator->relinearize_inplace(path_costs[level][l], *relin_keys, pool);
+                }
+            }
+
+            if (is_leaf_[cur] == 1){
+                if (met_leaf) evaluator->add_inplace(tot_ctx, path_costs[level].back());
+                else{
+                    tot_ctx = path_costs[level].back();
+                    met_leaf = true;
+                }
             }
 
             if (left_child_[cur] != -1) node_queue.push(left_child_[cur]);
             if (right_child_[cur] != -1) node_queue.push(right_child_[cur]);
         }
+
+        return tot_ctx;
     }
 }
 

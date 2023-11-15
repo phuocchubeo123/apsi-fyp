@@ -22,14 +22,14 @@ namespace apsi {
     using namespace util;
     namespace sender{
         BinBundle::BinBundle(): 
-            bp_()
+            bp_(), crypto_context_()
         {
             // Set up internal data structures
             clear();
         }
 
         BinBundle::BinBundle(const CryptoContext &crypto_context): 
-            crypto_context_ (crypto_context), 
+            crypto_context_(crypto_context), 
             bp_(crypto_context)
         {
             // Set up internal data structures
@@ -41,10 +41,11 @@ namespace apsi {
 
         template <>
         int32_t BinBundle::multi_insert(
-            const Item &item){
-                int32_t new_bp_size = bp_.addItem(item);
-                bundle_size_ = new_bp_size;
-                return new_bp_size;
-            }
+            const Item &item)
+        {
+            int32_t new_bp_size = bp_.addItem(item);
+            bundle_size_ = new_bp_size;
+            return new_bp_size;
+        }
     }
 }

@@ -111,26 +111,23 @@ namespace apsi {
             result part. Thus, to determine whether there was a match with the sender's data, the
             results for each received ResultPart must be checked.
             */
-            // std::vector<MatchRecord> process_result_part(
-            //     const std::vector<LabelKey> &label_keys,
-            //     const IndexTranslationTable &itt,
-            //     const ResultPart &result_part) const;
+            std::vector<MatchRecord> process_result_part(
+                const IndexTranslationTable &itt,
+                const ResultPart &result_part) const;
 
             /**
             This function does multiple calls to Receiver::process_result_part, once for each
             ResultPart in the given vector. The results are collected together so that the returned
             vector of MatchRecords reflects the logical OR of the results from each ResultPart.
             */
-            // std::vector<MatchRecord> process_result(
-            //     const std::vector<LabelKey> &label_keys,
-            //     const IndexTranslationTable &itt,
-            //     const std::vector<ResultPart> &result) const;
+            std::vector<MatchRecord> process_result(
+                const IndexTranslationTable &itt,
+                const std::vector<ResultPart> &result) const;
 
         private:
             void process_result_worker(
                 std::atomic<std::uint32_t> &package_count,
                 std::vector<MatchRecord> &mrs,
-                const std::vector<LabelKey> &label_keys,
                 const IndexTranslationTable &itt,
                 network::Channel &chl) const;
 

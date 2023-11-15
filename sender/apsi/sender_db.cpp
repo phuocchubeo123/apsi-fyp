@@ -242,6 +242,7 @@ namespace apsi {
             // Clear the BinBundles
             bin_bundles_.clear();
             for (int idx = 0; idx < params_.bundle_idx_count(); idx++){
+                APSI_LOG_INFO("Bundle number: " << idx);
                 bin_bundles_.push_back(BinBundle(crypto_context_));
             }
 
@@ -282,10 +283,6 @@ namespace apsi {
 
             // Clear the set of inserted items
             item_count_ = 0;
-
-            // Clear the BinBundles
-            bin_bundles_.clear();
-            bin_bundles_.resize(params_.bundle_idx_count());
         }
 
         void SenderDB::clear()

@@ -208,6 +208,14 @@ namespace apsi {
             std::size_t get_bin_bundle_count() const;
 
             /**
+            Returns a specific bin bundle
+            */
+            const BinBundle &get_bin_bundle(std::uint32_t bundle_idx) const
+            {
+                return bin_bundles_[bundle_idx];
+            }
+
+            /**
             Returns how efficiently the SenderDB is packaged. A higher rate indicates better
             performance and a lower communication cost in a query execution.
             */

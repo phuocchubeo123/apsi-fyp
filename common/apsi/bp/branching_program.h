@@ -6,6 +6,7 @@
 // APSI
 #include "apsi/item.h"
 #include "apsi/crypto_context.h"
+#include "apsi/log.h"
 
 namespace apsi{
     struct BP{  
@@ -25,8 +26,8 @@ namespace apsi{
         int32_t addItem(const Item& item);
 
         seal::Ciphertext eval(
-                const std::vector<seal::Ciphertext> &ciphertext_bits,
-                seal::MemoryPoolHandle &pool) const;
+            const std::vector<seal::Ciphertext> &ciphertext_bits,
+            seal::MemoryPoolHandle &pool) const;
     
     private:
         int nodes_count_;
