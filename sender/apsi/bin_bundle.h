@@ -9,6 +9,7 @@
 #include "apsi/crypto_context.h"
 #include "apsi/util/cuckoo_filter.h"
 #include "apsi/bp/branching_program.h"
+#include "apsi/plaintext_bits.h"
 
 // SEAL
 #include "seal/util/uintarithsmallmod.h"

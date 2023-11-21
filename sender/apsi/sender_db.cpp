@@ -128,38 +128,40 @@ namespace apsi {
             */
             template <typename T>
             void insert_or_assign_worker(
-                const vector<pair<T, size_t>> &data_with_indices,
+                const vector<vector<T>> &data,
                 vector<BinBundle> &bin_bundles,
                 CryptoContext &crypto_context,
                 uint32_t bundle_index,
                 uint32_t receiver_bins_per_bundle,
-                size_t max_bin_size)
+                size_t max_bin_size,
+                const PSIParams &params)
             {
                 STOPWATCH(sender_stopwatch, "insert_or_assign_worker");
                 APSI_LOG_DEBUG(
                     "Insert-or-Assign worker for bundle index "
                     << bundle_index << "; mode of operation: ");
 
-                // Iteratively insert each item-label pair at the given cuckoo index
-                for (auto &data_with_idx : data_with_indices) {
-                    const T &data = data_with_idx.first;
+                int max_bin_sizes = 0;
+                for (int bin_idx = 0; bin_idx < receiver_bins_per_bundle; bin_idx++){
+                    max_bin_sizes = max(max_bin_sizes, (int) data[bin_idx].size());
+                }
+                APSI_LOG_INFO("Max bin size: " << max_bin_sizes);
 
-                    // Get the bundle index
-                    size_t cuckoo_idx = data_with_idx.second;
-                    size_t bin_idx, bundle_idx;
-                    tie(bin_idx, bundle_idx) = unpack_cuckoo_idx(cuckoo_idx, receiver_bins_per_bundle);
+                uint32_t item_bit_count = params.item_params().item_bit_count;
+                string s(item_bit_count / 8, 'a');
+                T item_zero(s);
 
-                    // If the bundle_idx isn't in the prescribed range, don't try to insert this
-                    // data
-                    if (bundle_idx != bundle_index) {
-                        // Dealing with this bundle index is not our job
-                        continue;
+                for (int item_idx = 0; item_idx < max_bin_sizes; item_idx++){
+                    vector<T> items;
+                    for (int bin_idx = 0; bin_idx < receiver_bins_per_bundle; bin_idx++){
+                        if (item_idx >= data[bin_idx].size()) items.push_back(item_zero);
+                        else items.push_back(data[bin_idx][item_idx]);
                     }
+                    PlaintextBits ptx_bits(items, params);
 
                     // Get the bundle set at the given bundle index
-                    BinBundle &bundle = bin_bundles[bundle_idx];
-
-                    int32_t new_bundle_size = bundle.multi_insert(data);
+                    BinBundle &bundle = bin_bundles[bundle_index];
+                    uint32_t new_bundle_size = bundle.multi_insert(ptx_bits);
                 }
 
                 APSI_LOG_DEBUG(
@@ -177,7 +179,8 @@ namespace apsi {
                 vector<BinBundle> &bin_bundles,
                 CryptoContext &crypto_context,
                 uint32_t receiver_bins_per_bundle,
-                uint32_t max_bin_size)
+                uint32_t max_bin_size,
+                const PSIParams &params)
             {
                 ThreadPoolMgr tpm;
                 
@@ -201,6 +204,21 @@ namespace apsi {
                     back_inserter(bundle_indices));
                 sort(bundle_indices.begin(), bundle_indices.end());
 
+                vector<vector<vector<Item>>> datas(bundle_indices.size(), vector<vector<T>>(receiver_bins_per_bundle));
+                for (auto &data_with_idx: data_with_indices){
+                    size_t cuckoo_idx = data_with_idx.second;
+                    size_t bin_idx, bundle_idx;
+                    tie(bin_idx, bundle_idx) = unpack_cuckoo_idx(cuckoo_idx, receiver_bins_per_bundle);
+                    datas[bundle_idx][bin_idx].push_back(data_with_idx.first);
+                }
+
+                // for (int bundle_idx = 0; bundle_idx < datas.size(); bundle_idx++){
+                //     APSI_LOG_DEBUG("Bundle " << bundle_idx << ":");
+                //     for (int item_idx = 0; item_idx < datas[bundle_idx].size(); item_idx++){
+                //         APSI_LOG_DEBUG("Token and item: " << datas[bundle_idx][item_idx].raw_val() << " " << datas[bundle_idx][item_idx].to_string());
+                //     }
+                // }
+
                 // Run the threads on the partitions
                 vector<future<void>> futures(bundle_indices.size());
                 APSI_LOG_INFO(
@@ -210,12 +228,13 @@ namespace apsi {
                 for (auto &bundle_idx : bundle_indices) {
                     futures[future_idx++] = tpm.thread_pool().enqueue([&, bundle_idx]() {
                         insert_or_assign_worker(
-                            data_with_indices,
+                            datas[bundle_idx],
                             bin_bundles,
                             crypto_context,
                             static_cast<uint32_t>(bundle_idx),
                             receiver_bins_per_bundle,
-                            max_bin_size);
+                            max_bin_size,
+                            params);
                     });
                 }
 
@@ -310,7 +329,8 @@ namespace apsi {
                 bin_bundles_,
                 crypto_context_,
                 receiver_bins_per_bundle,
-                max_bin_size);
+                max_bin_size,
+                params_);
 
             // APSI_LOG_INFO("Number of bundles: " << bin_bundles_.size());
             // APSI_LOG_INFO("All bundle sizes: ");

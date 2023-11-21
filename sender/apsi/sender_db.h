@@ -22,6 +22,7 @@
 #include "apsi/item.h"
 #include "apsi/oprf/oprf_sender.h"
 #include "apsi/psi_params.h"
+#include "apsi/plaintext_bits.h"
 
 // SEAL
 #include "seal/plaintext.h"

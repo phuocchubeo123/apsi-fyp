@@ -7,6 +7,7 @@
 #include "apsi/item.h"
 #include "apsi/crypto_context.h"
 #include "apsi/log.h"
+#include "apsi/plaintext_bits.h"
 
 namespace apsi{
     struct BP{  
@@ -23,12 +24,15 @@ namespace apsi{
         void clear();
 
         int addChildNode(int parentNode);
-        int32_t addItem(const Item& item);
+
+        template <typename T>
+        int32_t addItem(const T &item);
 
         seal::Ciphertext eval(
             const std::vector<seal::Ciphertext> &ciphertext_bits,
+            const CryptoContext &crypto_context,
             seal::MemoryPoolHandle &pool) const;
-    
+            
     private:
         int nodes_count_;
         int leaves_count_;
@@ -41,5 +45,13 @@ namespace apsi{
         std::vector<int> is_leaf_;
 
         CryptoContext crypto_context_;
+
+        seal::Plaintext tot_ptx;
+
+        seal::Plaintext zero_ptx;
+
+        seal::Plaintext one_ptx;
+
+        std::vector<PlaintextBits> item_;
     }; 
 }

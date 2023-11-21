@@ -104,6 +104,7 @@ namespace apsi {
 
             uint32_t bundle_idx_count = params.bundle_idx_count();
             uint32_t max_items_per_bin = params.table_params().max_items_per_bin;
+            uint32_t item_bit_count = params.item_params().item_bit_count;
 
             // The query response only tells how many ResultPackages to expect; send this first
             uint32_t package_count = safe_cast<uint32_t>(sender_db->get_bin_bundle_count());
@@ -120,6 +121,17 @@ namespace apsi {
             }
 
             vector<CiphertextBits> all_bits(bundle_idx_count);
+
+            // Initialize powers
+            for (CiphertextBits &bits : all_bits) {
+                // The + 1 is because we index by power. The 0th power is a dummy value. I promise
+                // this makes things easier to read.
+                size_t bits_size = static_cast<size_t>(item_bit_count);
+                bits.reserve(bits_size);
+                for (size_t i = 0; i < bits_size; i++) {
+                    bits.emplace_back(pool);
+                }
+            }
 
             // Load inputs provided in the query
             for (auto &q : query.data()) {
@@ -185,9 +197,18 @@ namespace apsi {
 
             APSI_LOG_INFO("Evaluating branching program with " << all_bits[bundle_idx].size() << " bits");
 
-            rp->psi_result = branching_prog.eval(all_bits[bundle_idx], pool);
+            rp->psi_result = branching_prog.eval(all_bits[bundle_idx], crypto_context, pool);
 
-            APSI_LOG_INFO("Done evaluating branching program")
+            APSI_LOG_INFO("Done evaluating branching program in bundle index " << bundle_idx);
+
+            // Send this result part
+            try {
+                send_rp_fun(chl, move(rp));
+            } catch (const exception &ex) {
+                APSI_LOG_ERROR(
+                    "Failed to send result part; function threw an exception: " << ex.what());
+                throw;
+            }
         }
     }
 }

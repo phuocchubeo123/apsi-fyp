@@ -50,6 +50,15 @@ auto CSVReader::read(istream &stream) const -> pair<DBData, vector<string>>
         }
     }
 
+    if (holds_alternative<UnlabeledData>(result)) {
+        APSI_LOG_INFO("Currently reading unlabeled data!");
+    } else if (holds_alternative<LabeledData>(result)) {
+        APSI_LOG_ERROR("Currently not yet support labeled data!");
+    }
+    else{
+        APSI_LOG_ERROR("Critical error reading data");
+    }
+
     while (getline(stream, line)) {
         string orig_item;
         Item item;
@@ -116,6 +125,8 @@ pair<bool, bool> CSVReader::process_line(
     // Item can be of arbitrary length; the constructor of Item will automatically hash it
     orig_item = token;
     item = token;
+
+    APSI_LOG_DEBUG("Token and item: " << token << " " << item.to_string());
 
     // Second is the label
     token.clear();

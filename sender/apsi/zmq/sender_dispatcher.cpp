@@ -121,6 +121,10 @@ namespace apsi {
                 // Create the Query object
                 Query query(to_query_request(move(sop->sop)), sender_db_);
 
+                for (auto &q: query.data()){
+                    APSI_LOG_DEBUG(q.first << " " << q.second.size());
+                }
+
                 // Query will send result to client in a stream of ResultPackages (ResultParts)
                 Sender::RunQuery(
                     query,

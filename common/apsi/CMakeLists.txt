@@ -4,6 +4,7 @@ set(APSI_SOURCE_FILES ${APSI_SOURCE_FILES}
     ${CMAKE_CURRENT_LIST_DIR}/version.cpp
     ${CMAKE_CURRENT_LIST_DIR}/thread_pool_mgr.cpp
     ${CMAKE_CURRENT_LIST_DIR}/psi_params.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/plaintext_bits.cpp
 )
 
 add_subdirectory(network)

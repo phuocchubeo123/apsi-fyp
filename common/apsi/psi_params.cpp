@@ -226,6 +226,10 @@ namespace apsi {
             seal_params.load(
                 reinterpret_cast<const seal_byte *>(seal_params_data.data()),
                 seal_params_data.size());
+            // seal_params.set_poly_modulus_degree(4096);
+            // seal_params.set_coeff_modulus(CoeffModulus::BFVDefault(4096));
+            // seal_params.set_plain_modulus(65537);
+
         } catch (const logic_error &ex) {
             stringstream ss;
             ss << "failed to load parameters: ";
