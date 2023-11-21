@@ -27,6 +27,7 @@ namespace apsi{
 
         seal::Ciphertext eval(
             const std::vector<seal::Ciphertext> &ciphertext_bits,
+            const CryptoContext &crypto_context,
             seal::MemoryPoolHandle &pool) const;
     
     private:
@@ -41,5 +42,11 @@ namespace apsi{
         std::vector<int> is_leaf_;
 
         CryptoContext crypto_context_;
+
+        seal::Plaintext tot_ptx;
+
+        seal::Plaintext zero_ptx;
+
+        seal::Plaintext one_ptx;
     }; 
 }

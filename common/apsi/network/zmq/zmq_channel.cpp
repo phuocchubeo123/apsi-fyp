@@ -295,7 +295,7 @@ namespace apsi {
             n_sop->client_id = move(client_id);
             n_sop->sop = move(sop);
 
-            APSI_LOG_DEBUG(
+            APSI_LOG_INFO(
                 "Received an operation of type " << sender_operation_type_str(sop_header.type)
                                                  << " (" << bytes_received_ - old_bytes_received
                                                  << " bytes)");
@@ -316,7 +316,7 @@ namespace apsi {
             // Construct the header
             SenderOperationHeader sop_header;
             sop_header.type = sop->type();
-            APSI_LOG_DEBUG(
+            APSI_LOG_INFO(
                 "Sending operation of type " << sender_operation_type_str(sop_header.type));
 
             size_t bytes_sent = 0;
@@ -329,7 +329,7 @@ namespace apsi {
             send_message(msg);
             bytes_sent_ += bytes_sent;
 
-            APSI_LOG_DEBUG(
+            APSI_LOG_INFO(
                 "Sent an operation of type " << sender_operation_type_str(sop_header.type) << " ("
                                              << bytes_sent << " bytes)");
         }
@@ -395,9 +395,6 @@ namespace apsi {
                     << sender_operation_type_str(sop_header.type));
                 return nullptr;
             }
-
-            APSI_LOG_INFO("Done checking sender operation header! Version: " << sop_header.version << " type: " << sender_operation_type_str(sop_header.type));
-
 
             // Number of bytes received now
             size_t bytes_received = 0;
@@ -518,6 +515,55 @@ namespace apsi {
             bytes_sent_ += bytes_sent;
 
             APSI_LOG_INFO("Sent a result package (" << bytes_sent << " bytes)");
+        }
+
+        unique_ptr<ResultPackage> ZMQChannel::receive_result(shared_ptr<SEALContext> context)
+        {
+            throw_if_not_connected();
+
+            bool valid_context = context && context->parameters_set();
+            if (!valid_context) {
+                // Cannot receive a result package without a valid SEALContext
+                APSI_LOG_ERROR(
+                    "Cannot receive a result package; SEALContext is missing or invalid");
+                return nullptr;
+            }
+
+            multipart_t msg;
+            if (!receive_message(msg)) {
+                // No message yet. Don't log anything.
+                return nullptr;
+            }
+
+            // Should have only one part: ResultPackage.
+            if (msg.size() != 1) {
+                APSI_LOG_ERROR(
+                    "ZeroMQ received a message with " << msg.size()
+                                                      << " parts but expected 1 part");
+                throw runtime_error("invalid message received");
+            }
+
+            // Number of bytes received now
+            size_t bytes_received = 0;
+
+            // Return value
+            unique_ptr<ResultPackage> rp(make_unique<ResultPackage>());
+
+            try {
+                bytes_received = load_from_string(msg[0].to_string(), move(context), *rp);
+                bytes_received_ += bytes_received;
+            } catch (const invalid_argument &ex) {
+                APSI_LOG_ERROR("An exception was thrown loading operation data: " << ex.what());
+                return nullptr;
+            } catch (const runtime_error &ex) {
+                APSI_LOG_ERROR("An exception was thrown loading operation data: " << ex.what());
+                return nullptr;
+            }
+
+            // Loaded successfully
+            APSI_LOG_INFO("Received a result package (" << bytes_received << " bytes)");
+
+            return rp;
         }
     }
 }

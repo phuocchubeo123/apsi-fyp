@@ -28,6 +28,8 @@ namespace apsi {
             std::unordered_map<std::uint32_t, SEALObject<seal::Ciphertext>> encrypt(
                 const CryptoContext &crypto_context);
 
+            std::string bit_list() const;
+
             private:
             uint32_t item_bit_count_;
             seal::Modulus mod_;

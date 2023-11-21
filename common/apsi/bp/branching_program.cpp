@@ -22,6 +22,13 @@ namespace apsi{
         parent_.clear(); parent_.push_back(-1);
         level_.clear(); level_.push_back(-1);
         is_leaf_.clear(); is_leaf_.push_back(0);
+
+        vector<uint64_t> zero_const(crypto_context_.encoder()->slot_count(), 0);
+        vector<uint64_t> one_const(crypto_context_.encoder()->slot_count(), 1);
+
+        crypto_context_.encoder()->encode(zero_const, tot_ptx);
+        crypto_context_.encoder()->encode(zero_const, zero_ptx);
+        crypto_context_.encoder()->encode(one_const, zero_ptx);
     }
 
     int BP::addChildNode(int parent_node){
@@ -54,35 +61,22 @@ namespace apsi{
         }
         is_leaf_[cur] = 1;
         if (cur == nodes_count_-1) leaves_count_++;
-        APSI_LOG_INFO(leaves_count_ << " " << nodes_count_ << " " << left_child_[0] << " " << right_child_[0]);
+        APSI_LOG_DEBUG(leaves_count_ << " " << nodes_count_ << " " << left_child_[0] << " " << right_child_[0]);
         return leaves_count_;
     }
 
     Ciphertext BP::eval(
         const vector<Ciphertext> &ciphertext_bits, 
+        const CryptoContext &crypto_context,
         MemoryPoolHandle &pool) const
         {
     #ifdef SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT
             static_assert(
                 false, "SEAL must be built with SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT=OFF");
     #endif
-        auto seal_context = crypto_context_.seal_context();
-        auto evaluator = crypto_context_.evaluator();
-        auto relin_keys = crypto_context_.relin_keys();
-
-        vector<uint64_t> zero_const(crypto_context_.encoder()->slot_count(), 0);
-        vector<uint64_t> one_const(crypto_context_.encoder()->slot_count(), 1);
-
-        Plaintext tot_ptx;
-        crypto_context_.encoder()->encode(zero_const, tot_ptx);
-
-        Ciphertext tot_ctx;
-
-        Plaintext zero_ptx;
-        crypto_context_.encoder()->encode(zero_const, zero_ptx);
-
-        Plaintext one_ptx;
-        crypto_context_.encoder()->encode(one_const, zero_ptx);
+        auto seal_context = crypto_context.seal_context();
+        auto evaluator = crypto_context.evaluator();
+        auto relin_keys = crypto_context.relin_keys();
 
         if (nodes_count_ == 1){
             APSI_LOG_INFO("Empty BP");
@@ -98,13 +92,14 @@ namespace apsi{
             uint32_t max_sub_path;
             for (int l = 0; (((d+1) >> l) << l) == d+1; l++) max_sub_path = l;
             path_costs[d].resize(max_sub_path + 1);
-            APSI_LOG_INFO("Num paths: " << d << " " << max_sub_path + 1);
+            // APSI_LOG_INFO("Num paths: " << d << " " << max_sub_path + 1);
         }
-
 
         queue<int> node_queue;
         node_queue.push(0);
         bool met_leaf = false;
+
+        Ciphertext tot_ctx;
 
         while (!node_queue.empty()){
             int cur = node_queue.front();
@@ -112,19 +107,22 @@ namespace apsi{
 
             int level = level_[cur];
 
-            APSI_LOG_INFO("Processing node " << cur << " at level " << level);
+            // APSI_LOG_INFO("Processing node " << cur << " at level " << level);
 
             if (cur > 0){
                 bool side = (left_child_[parent_[cur]] == cur) ? 0 : 1;
-                APSI_LOG_INFO("Side: " << side);
+                // APSI_LOG_INFO("Side: " << side);
 
-                APSI_LOG_INFO("Set path cost, recall that there are " << path_costs[level].size() << " costs to calculate");
+                // APSI_LOG_INFO("Set path cost, recall that there are " << path_costs[level].size() << " costs to calculate");
                 path_costs[level][0] = ciphertext_bits[level];
-                evaluator->sub_plain_inplace(path_costs[level][0], (side == 1) ? zero_ptx : one_ptx);
+                evaluator->sub_plain_inplace(path_costs[level][0], (side == 0) ? zero_ptx : one_ptx);
+                // APSI_LOG_INFO("Subtracted");
 
-                APSI_LOG_INFO("Subtracted");
                 evaluator->square_inplace(path_costs[level][0], pool);
+                // APSI_LOG_INFO("Squared");
+
                 evaluator->relinearize_inplace(path_costs[level][0], *relin_keys, pool);
+                // APSI_LOG_INFO("Relinearized");
 
                 for (int l = 1; l < path_costs[level].size(); l++){
                     path_costs[level][l] = path_costs[level-(1<<(l-1))][l-1];

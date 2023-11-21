@@ -28,12 +28,6 @@ namespace apsi {
             std::uint32_t bundle_idx;
 
             std::vector<std::uint64_t> psi_result;
-
-            std::uint32_t label_byte_count;
-
-            std::uint32_t nonce_byte_count;
-
-            std::vector<std::vector<std::uint64_t>> label_result;
         };
 
         /**

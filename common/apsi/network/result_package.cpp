@@ -50,5 +50,77 @@ namespace apsi {
 
             return fbs_builder.GetSize();
         }
+
+        /**
+        Reads the ResultPackage from a stream.
+        */
+        size_t ResultPackage::load(istream &in, shared_ptr<SEALContext> context)
+        {
+            // The context must be set and valid for this operation
+            if (!context) {
+                throw invalid_argument("context cannot be null");
+            }
+            if (!context->parameters_set()) {
+                throw invalid_argument("context is invalid");
+            }
+
+            // Clear the current data
+            psi_result.clear();
+
+            vector<unsigned char> in_data(util::read_from_stream(in));
+
+            auto verifier = flatbuffers::Verifier(
+                reinterpret_cast<const uint8_t *>(in_data.data()), in_data.size());
+            bool safe = fbs::VerifySizePrefixedResultPackageBuffer(verifier);
+            if (!safe) {
+                throw runtime_error("failed to load ResultPackage: invalid buffer");
+            }
+
+            auto rp = fbs::GetSizePrefixedResultPackage(in_data.data());
+
+            bundle_idx = rp->bundle_idx();
+
+            // Load psi_result
+            const auto &psi_ct = *rp->psi_result();
+            gsl::span<const unsigned char> psi_ct_span(
+                reinterpret_cast<const unsigned char *>(psi_ct.data()->data()),
+                psi_ct.data()->size());
+            try {
+                psi_result.load(context, psi_ct_span);
+            } catch (const logic_error &ex) {
+                stringstream ss;
+                ss << "failed to load PSI ciphertext: ";
+                ss << ex.what();
+                throw runtime_error(ss.str());
+            } catch (const runtime_error &ex) {
+                stringstream ss;
+                ss << "failed to load PSI ciphertext: ";
+                ss << ex.what();
+                throw runtime_error(ss.str());
+            }
+
+            return in_data.size();
+        }
+
+        PlainResultPackage ResultPackage::extract(const CryptoContext &crypto_context)
+        {
+            if (!crypto_context.decryptor()) {
+                throw runtime_error("decryptor is not configured in CryptoContext");
+            }
+
+            Ciphertext psi_result_ct = psi_result.extract(crypto_context.seal_context());
+            Plaintext psi_result_pt;
+            crypto_context.decryptor()->decrypt(psi_result_ct, psi_result_pt);
+            APSI_LOG_DEBUG(
+                "Matching result noise budget: "
+                << crypto_context.decryptor()->invariant_noise_budget(psi_result_ct) << " bits ["
+                << this_thread::get_id() << "]");
+
+            PlainResultPackage plain_rp;
+            plain_rp.bundle_idx = bundle_idx;
+            crypto_context.encoder()->decode(psi_result_pt, plain_rp.psi_result);
+
+            return plain_rp;
+        }
     } // namespace network
 } // namespace apsi

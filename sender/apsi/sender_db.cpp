@@ -201,6 +201,21 @@ namespace apsi {
                     back_inserter(bundle_indices));
                 sort(bundle_indices.begin(), bundle_indices.end());
 
+                vector<vector<Item>> datas(bundle_indices.size());
+                for (auto &data_with_idx: data_with_indices){
+                    size_t cuckoo_idx = data_with_idx.second;
+                    size_t bin_idx, bundle_idx;
+                    tie(bin_idx, bundle_idx) = unpack_cuckoo_idx(cuckoo_idx, receiver_bins_per_bundle);
+                    datas[bundle_idx].push_back(data_with_idx.first);
+                }
+
+                for (int bundle_idx = 0; bundle_idx < datas.size(); bundle_idx++){
+                    APSI_LOG_DEBUG("Bundle " << bundle_idx << ":");
+                    for (int item_idx = 0; item_idx < datas[bundle_idx].size(); item_idx++){
+                        APSI_LOG_DEBUG("Token and item: " << datas[bundle_idx][item_idx].raw_val() << " " << datas[bundle_idx][item_idx].to_string());
+                    }
+                }
+
                 // Run the threads on the partitions
                 vector<future<void>> futures(bundle_indices.size());
                 APSI_LOG_INFO(
