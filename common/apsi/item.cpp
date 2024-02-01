@@ -23,16 +23,10 @@ namespace apsi {
             throw std::invalid_argument("str cannot be empty");
         }
 
-        for (char c: str){
-            raw_val_.push_back(c);
-        }
-
         hash_to_value(str.data(), str.size() * sizeof(char));
 
         for (char c: str){
-            for (int bit = 0; bit < 8; bit++){
-                value_.push_back((charToByte[c-'A'] >> bit) & 1);
-            }
+            value_.push_back(c - '0');
         }
         return *this;
     }

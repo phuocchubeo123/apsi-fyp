@@ -236,10 +236,6 @@ namespace apsi {
             return value_.size();
         }
 
-        std::string raw_val() const{
-            return raw_val_;
-        }
-
         /**
         Returns a span of a desired (standard layout) type to the label data.
         */
@@ -267,7 +263,6 @@ namespace apsi {
         void hash_to_value(const void *in, std::size_t size);
         value_type value_{};
         value_hashed_type value_hashed_{};
-        std::string raw_val_;
 
     }; // class Item
 

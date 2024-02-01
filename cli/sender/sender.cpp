@@ -63,17 +63,7 @@ void sigint_handler(int param [[maybe_unused]])
     exit(0);
 }
 
-shared_ptr<SenderDB> try_load_sender_db(const CLP &cmd, OPRFKey &oprf_key)
-{
-    shared_ptr<SenderDB> result = nullptr;
-
-    ifstream fs(cmd.db_file(), ios::binary);
-    fs.exceptions(ios_base::badbit | ios_base::failbit);
-
-    return 0;
-}
-
-shared_ptr<SenderDB> try_load_csv_db(const CLP &cmd, OPRFKey &oprf_key)
+shared_ptr<SenderDB> try_load_csv_db(const CLP &cmd)
 {
     APSI_LOG_INFO("Reading PSI parameters...")
     unique_ptr<PSIParams> params = build_psi_params(cmd);
@@ -94,7 +84,7 @@ shared_ptr<SenderDB> try_load_csv_db(const CLP &cmd, OPRFKey &oprf_key)
     }
 
     return create_sender_db(
-        *db_data, move(params), oprf_key, cmd.nonce_byte_count(), cmd.compress());
+        *db_data, move(params), cmd.nonce_byte_count(), cmd.compress());
 }
 
 int start_sender(const CLP& cmd){
@@ -107,7 +97,6 @@ int start_sender(const CLP& cmd){
 
     // Try loading first as a SenderDB, then as a CSV file
     shared_ptr<SenderDB> sender_db;
-    OPRFKey oprf_key;
 
     APSI_LOG_INFO("Trying to load sender db...");
 
@@ -124,7 +113,7 @@ int start_sender(const CLP& cmd){
 
     // Run the dispatcher
     atomic<bool> stop = false;
-    ZMQSenderDispatcher dispatcher(sender_db, oprf_key);
+    ZMQSenderDispatcher dispatcher(sender_db);
 
     // The dispatcher will run until stopped.
     dispatcher.run(stop, cmd.net_port());
@@ -152,7 +141,6 @@ unique_ptr<CSVReader::DBData> load_db(const string &db_file)
 shared_ptr<SenderDB> create_sender_db(
     const CSVReader::DBData &db_data,
     unique_ptr<PSIParams> psi_params,
-    OPRFKey &oprf_key,
     size_t nonce_byte_count,
     bool compress)
 {

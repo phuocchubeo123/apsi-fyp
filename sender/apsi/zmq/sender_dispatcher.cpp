@@ -22,14 +22,6 @@ namespace apsi {
     using namespace oprf;
 
     namespace sender {
-        ZMQSenderDispatcher::ZMQSenderDispatcher(shared_ptr<SenderDB> sender_db, OPRFKey oprf_key)
-            : sender_db_(move(sender_db)), oprf_key_(move(oprf_key))
-        {
-            if (!sender_db_) {
-                throw invalid_argument("sender_db is not set");
-            }
-        }
-
         ZMQSenderDispatcher::ZMQSenderDispatcher(shared_ptr<SenderDB> sender_db)
             : sender_db_(move(sender_db))
         {
