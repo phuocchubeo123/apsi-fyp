@@ -26,9 +26,8 @@ namespace apsi{
         vector<uint64_t> zero_const(crypto_context_.encoder()->slot_count(), 0);
         vector<uint64_t> one_const(crypto_context_.encoder()->slot_count(), 1);
 
-        crypto_context_.encoder()->encode(zero_const, tot_ptx);
         crypto_context_.encoder()->encode(zero_const, zero_ptx);
-        crypto_context_.encoder()->encode(one_const, zero_ptx);
+        crypto_context_.encoder()->encode(one_const, one_ptx);
     }
 
     int BP::addChildNode(int parent_node){
@@ -163,15 +162,18 @@ namespace apsi{
         auto relin_keys = crypto_context.relin_keys();
 
         Ciphertext tot_ctx;
+        Ciphertext com_ctx;
 
         uint32_t depth = ciphertext_bits.size();
         vector<vector<Ciphertext>> path_costs(depth);
         for (int d = 0; d < depth; d++){
             uint32_t max_sub_path;
-            for (int l = 0; (((d+1) >> l) << l) == d+1; l++) max_sub_path = l;
-            if (max_sub_path > 5) max_sub_path = 5;
+            if (depth == 16) max_sub_path = 4;
+            else max_sub_path = 5;
+            // for (int l = 0; (((d+1) >> l) << l) == d+1; l++) max_sub_path = l;
+            // if (max_sub_path > 5) max_sub_path = 5;
             path_costs[d].resize(max_sub_path + 1);
-            APSI_LOG_DEBUG("Num paths: " << d << " " << max_sub_path + 1);
+            // APSI_LOG_DEBUG("Num paths: " << d << " " << max_sub_path + 1);
         }
 
         bool met_leaf = false;
@@ -190,26 +192,48 @@ namespace apsi{
                 evaluator->sub_plain_inplace(path_costs[level][0], ptx);
                 evaluator->square_inplace(path_costs[level][0], pool);
                 evaluator->relinearize_inplace(path_costs[level][0], *relin_keys, pool);
-                // evaluator->mod_switch_to_next_inplace(path_costs[level][0]);
+                evaluator->mod_switch_to_next_inplace(path_costs[level][0]);
                 evaluator->negate_inplace(path_costs[level][0]);
                 evaluator->add_plain_inplace(path_costs[level][0], one_ptx);
             }
 
-            for (int level = 1; level < depth; level++){
+            for (int level = 0; level < depth; level++){
                 for (int l = 1; l < path_costs[level].size(); l++){
+                    APSI_LOG_INFO("Computing level: " << level << " with log path: " << l);
                     path_costs[level][l] = path_costs[level][l-1];
-                    evaluator->multiply_inplace(path_costs[level][l], path_costs[level-(1<<(l-1))][l-1]);
-                    evaluator->relinearize_inplace(path_costs[level][l], *relin_keys, pool);
-                    // evaluator->mod_switch_to_next_inplace(path_costs[level][l]);
+                    if (level - (1 << (l-1)) >= 0){
+                        APSI_LOG_INFO("Multiplying");
+                        evaluator->multiply_inplace(path_costs[level][l], path_costs[level-(1<<(l-1))][l-1]);
+                        evaluator->relinearize_inplace(path_costs[level][l], *relin_keys, pool);
+                    }
+                    else{
+                        APSI_LOG_INFO("Adding");
+                        evaluator->add_plain_inplace(path_costs[level][l], zero_ptx);
+                    }
+                    evaluator->mod_switch_to_next_inplace(path_costs[level][l]);
                 }
                 // evaluator->add_inplace(path_costs[level][0], path_costs[level-1][0]);
             }
 
+            int d = depth;
+            if (depth == 24){
+                com_ctx = path_costs[d-1][3];
+                evaluator->mod_switch_to_next_inplace(com_ctx);
+                evaluator->multiply_inplace(com_ctx, path_costs[15][4]);
+                evaluator->relinearize_inplace(com_ctx, *relin_keys, pool);
+                evaluator->mod_switch_to_next_inplace(com_ctx);
+            }
+            else{
+                com_ctx = path_costs[d-1].back();
+            }
+
             if (met_leaf){
-                evaluator->add_inplace(tot_ctx, path_costs[depth-1].back());
+                // evaluator->add_inplace(tot_ctx, path_costs[depth-1].back());
                 // evaluator->add_inplace(tot_ctx, path_costs[depth-1][0]);
+                evaluator->add_inplace(tot_ctx, com_ctx);
             } else{
-                tot_ctx = path_costs[depth-1].back();
+                // tot_ctx = path_costs[depth-1].back();
+                tot_ctx = com_ctx;
                 met_leaf = true;
             }
         }

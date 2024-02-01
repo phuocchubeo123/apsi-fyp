@@ -34,6 +34,13 @@ namespace apsi {
                 value_.push_back((charToByte[c-'A'] >> bit) & 1);
             }
         }
+
+        // int cc = 0;
+        // for (char c: str){
+        //     value_hashed_[2*cc] = c;
+        //     value_hashed_[2*cc+1] = c;
+        //     cc++;
+        // }
         return *this;
     }
 

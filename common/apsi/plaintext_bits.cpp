@@ -60,4 +60,15 @@ namespace apsi {
             bits_[bit] = bits_vec;
         }
     }
+
+    string PlaintextBits::bit_list() const
+    {
+        string s;
+        for (int bit = 0; bit < item_bit_count_; bit++){
+            vector<uint64_t> bits = get_bit(bit);
+            for (int item_idx = 0; item_idx < bits.size(); item_idx++) s.push_back('0'+bits[item_idx]);
+            s.push_back('\n');
+        }
+        return s;
+    }
 }

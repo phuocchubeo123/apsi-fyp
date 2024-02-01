@@ -50,7 +50,7 @@ namespace apsi {
         {
             auto item_idx = table_idx_to_item_idx_.find(table_idx);
             if (item_idx == table_idx_to_item_idx_.cend()) {
-                return 0;
+                return 1e9;
             }
 
             return item_idx->second;
@@ -244,19 +244,27 @@ namespace apsi {
             APSI_LOG_INFO("Tables filled!");
             vector<PlaintextBits> plaintext_bits;
 
+            string zz(params_.item_params().item_bit_count / 8, 'z');
+            Item all_z(zz);
+
             {
                 STOPWATCH(recv_stopwatch, "Receiver::create_query::prepare_data");
                 for (uint32_t bundle_idx = 0; bundle_idx < params_.bundle_idx_count();
                      bundle_idx++) {
                     vector<Item> bundle_items;
                     for (int bin_idx = 0; bin_idx < params_.receiver_bins_per_bundle(); bin_idx++){
-                        bundle_items.push_back(items[itt.find_item_idx(bundle_idx * params_.receiver_bins_per_bundle() + bin_idx)]);
+                        size_t item_idx = itt.find_item_idx(bundle_idx * params_.receiver_bins_per_bundle() + bin_idx);
+                        if (item_idx < 1e9) bundle_items.push_back(items[item_idx]);
+                        else bundle_items.push_back(all_z);
                     }
                     APSI_LOG_DEBUG("For bundle " << bundle_idx << ", there are " << bundle_items.size() << " items");
                     for (int item_idx = 0; item_idx < bundle_items.size(); item_idx++){
                         APSI_LOG_DEBUG("Token and item: " << bundle_items[item_idx].raw_val() << " " << bundle_items[item_idx].to_string());
                     }
                     plaintext_bits.emplace_back(move(bundle_items), params_);
+
+                    // APSI_LOG_INFO("Bundle: " << bundle_idx << ", Plaintext: ");
+                    // APSI_LOG_INFO(plaintext_bits.back().bit_list());
                 }
             }
 

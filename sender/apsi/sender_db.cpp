@@ -103,6 +103,7 @@ namespace apsi {
                 for (auto it = begin; it != end; it++) {
                     const Item &item = *it;
 
+                    set<size_t> idx_set;
                     // Get the cuckoo table locations for this item and add to data_with_indices
                     for (auto location : all_locations(hash_funcs, item)) {
                         // The current hash value is an index into a table of Items. In reality our
@@ -111,6 +112,9 @@ namespace apsi {
                         size_t bin_idx = location;
 
                         // Store the data along with its index
+                        idx_set.insert(bin_idx);
+                    }
+                    for (auto bin_idx: idx_set){
                         data_with_indices.emplace_back(make_pair(item, bin_idx));
                     }
                 }
@@ -158,11 +162,24 @@ namespace apsi {
                         else items.push_back(data[bin_idx][item_idx]);
                     }
                     PlaintextBits ptx_bits(items, params);
+                    // APSI_LOG_INFO("Bundle: " << bundle_index << ", Plaintext: ");
+                    // APSI_LOG_INFO(ptx_bits.bit_list());
 
                     // Get the bundle set at the given bundle index
                     BinBundle &bundle = bin_bundles[bundle_index];
                     uint32_t new_bundle_size = bundle.multi_insert(ptx_bits);
                 }
+
+                // for (int bundle_idx = 0; bundle_idx < bin_bundles.size(); bundle_idx++){
+                //     APSI_LOG_INFO("Bundle " << bundle_idx << ":");
+                //     for (int bin_idx = 0; bin_idx < receiver_bins_per_bundle; bin_idx++){
+                //         APSI_LOG_INFO("Bin: " << bin_idx << ":");
+                //         for (int item_idx = 0; item_idx < datas[bundle_idx].size(); item_idx++){
+                //             APSI_LOG_INFO("Token and item: " << datas[bundle_idx][item_idx].raw_val() << " " << datas[bundle_idx][item_idx].to_string());
+                //         }
+                //     }
+                // }
+
 
                 APSI_LOG_DEBUG(
                     "Insert-or-Assign worker: finished processing bundle index " << bundle_index);
@@ -211,13 +228,6 @@ namespace apsi {
                     tie(bin_idx, bundle_idx) = unpack_cuckoo_idx(cuckoo_idx, receiver_bins_per_bundle);
                     datas[bundle_idx][bin_idx].push_back(data_with_idx.first);
                 }
-
-                // for (int bundle_idx = 0; bundle_idx < datas.size(); bundle_idx++){
-                //     APSI_LOG_DEBUG("Bundle " << bundle_idx << ":");
-                //     for (int item_idx = 0; item_idx < datas[bundle_idx].size(); item_idx++){
-                //         APSI_LOG_DEBUG("Token and item: " << datas[bundle_idx][item_idx].raw_val() << " " << datas[bundle_idx][item_idx].to_string());
-                //     }
-                // }
 
                 // Run the threads on the partitions
                 vector<future<void>> futures(bundle_indices.size());

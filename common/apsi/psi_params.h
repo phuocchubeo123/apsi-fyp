@@ -45,9 +45,9 @@ namespace apsi{
         */
 
        struct ItemParams {
-            constexpr static std::uint32_t item_bit_count_min = 32;
+            constexpr static std::uint32_t item_bit_count_min = 16;
 
-            constexpr static std::uint32_t item_bit_count_max = 128;
+            constexpr static std::uint32_t item_bit_count_max = 64;
 
             std::uint32_t item_bit_count;
         };
