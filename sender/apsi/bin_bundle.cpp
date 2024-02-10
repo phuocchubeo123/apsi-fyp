@@ -41,15 +41,6 @@ namespace apsi {
 
         template <>
         int32_t BinBundle::multi_insert(
-            const Item &item)
-        {
-            int32_t new_bp_size = bp_.addItem(item);
-            bundle_size_ = new_bp_size;
-            return new_bp_size;
-        }
-
-        template <>
-        int32_t BinBundle::multi_insert(
             const PlaintextBits &item
         )
         {

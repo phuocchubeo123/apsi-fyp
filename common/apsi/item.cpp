@@ -30,9 +30,7 @@ namespace apsi {
         hash_to_value(str.data(), str.size() * sizeof(char));
 
         for (char c: str){
-            for (int bit = 0; bit < 8; bit++){
-                value_.push_back((charToByte[c-'A'] >> bit) & 1);
-            }
+            value_.push_back(c - '0');
         }
 
         // int cc = 0;
