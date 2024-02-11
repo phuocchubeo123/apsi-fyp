@@ -455,6 +455,9 @@ if(APSI_BUILD_CLI)
     target_include_directories(pd_tool PRIVATE cli)
     target_include_directories(pd_tool PRIVATE ${TCLAP_INCLUDE_DIRS})
     target_link_libraries(pd_tool apsi)
+
+    add_executable(data_gen)
+    add_subdirectory(cli/data_gen)
 endif()
 
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-stack-protector")

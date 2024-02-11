@@ -1,4 +1,5 @@
 #include<iostream>
+#include<fstream>
 #include<random>
 #include<set>
 #include<chrono>
@@ -23,7 +24,8 @@ int main(int argc, char* argv[]){
     int intersection_size = stoi(argv[4]);
 
     if (check_byte(byte_num) ^ 1){
-        throw "Currently do not support numbers different from 16, 32, and 64 bits.";
+        cout << "Currently do not support numbers different from 16, 32, and 64 bits.";
+        throw;
     }
 
     cout << "Number of bytes: " << byte_num << "\n";
@@ -59,6 +61,13 @@ int main(int argc, char* argv[]){
         sender_set.insert(s);
     }
 
+    // Write sender's set into sender's db
+    ofstream sender_file;
+    string sender_name = argv[5];
+    sender_file.open(sender_name);
+    for (string s: sender_set) sender_file << s << "\n";
+    sender_file.close();
+
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start);
     cout << "Time for preparing sender: " << duration.count() / 1000000 << "s" << endl;
@@ -66,7 +75,7 @@ int main(int argc, char* argv[]){
     start = high_resolution_clock::now();
 
     set<string> receiver_set = intersection_set;
-    while (sender_set.size() < receiver_size){
+    while (receiver_set.size() < receiver_size){
         string s;
         for (int i = 0; i < bit_num; i++){
             s.push_back('0' + rand() % 2);
@@ -74,6 +83,13 @@ int main(int argc, char* argv[]){
         if (sender_set.find(s) != sender_set.end() && intersection_set.find(s) == intersection_set.end()) continue;
         receiver_set.insert(s);
     }
+
+    // Write receiver's set into receiver's db
+    ofstream receiver_file;
+    string receiver_name = argv[6];
+    receiver_file.open(receiver_name);
+    for (string s: receiver_set) receiver_file << s << "\n";
+    receiver_file.close();
 
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start);
