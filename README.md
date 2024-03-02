@@ -8,3 +8,6 @@ This code is not fully releasable yet. I am actively updating the v2 branch, whi
 
 This repository has a largely similar set of dependencies to microsoft/apsi.
 I have so far only test it with vcpkg.
+
+Some found issues:
+1. You should install pkg-config in order to install seal.
