@@ -24,3 +24,4 @@ We can install the following packages with vcpkg:
 
 Issues found so far:
 - vcpkg cannot detect compiler: please install g++. Gcc may not work.
+
