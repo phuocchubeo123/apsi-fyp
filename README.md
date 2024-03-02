@@ -15,7 +15,12 @@ We need:
 - cmake (tested with 3.22)
 
 We can install the following packages with vcpkg:
-- seal
+- Seal
+- Kuku
+- Flatbuffers
+- jsoncpp
+- log4cplus
+- cppzmq
 
 Issues found so far:
 - vcpkg cannot detect compiler: please install g++. Gcc may not work.
