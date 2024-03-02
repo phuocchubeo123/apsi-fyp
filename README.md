@@ -9,5 +9,13 @@ This code is not fully releasable yet. I am actively updating the v2 branch, whi
 This repository has a largely similar set of dependencies to microsoft/apsi.
 I have so far only test it with vcpkg.
 
-Some found issues:
-1. You should install pkg-config in order to install seal.
+We need:
+- g++ compiler.
+- vcpkg
+- cmake (tested with 3.22)
+
+We can install the following packages with vcpkg:
+- seal
+
+Issues found so far:
+- vcpkg cannot detect compiler: please install g++. Gcc may not work.
