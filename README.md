@@ -27,7 +27,7 @@ Issues found so far:
 
 # What should you look for in order to verify this repo
 
-## The <tt> cli <\tt> folder
+## The <tt> cli </tt> folder
 The folder contains some custom source code for:
 - Generating synthetic data
 - Read data from json files
