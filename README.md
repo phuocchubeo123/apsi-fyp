@@ -25,7 +25,7 @@ We can install the following packages with vcpkg:
 Issues found so far:
 - vcpkg cannot detect compiler: please install g++. Gcc may not work.
 
-# What should you look for in order to verify this repo
+# What should you look for to modify this repo
 
 ## The <tt> cli </tt> folder
 The folder contains some custom source code for:
