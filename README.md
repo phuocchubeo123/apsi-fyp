@@ -21,6 +21,7 @@ We can install the following packages with vcpkg:
 - jsoncpp
 - log4cplus
 - cppzmq
+- tclap
 
 Issues found so far:
 - vcpkg cannot detect compiler: please install g++. Gcc may not work.
@@ -33,3 +34,16 @@ The folder contains some custom source code for:
 - Read data from json files
 - A program to act as the sender
 - A program to act as the receiver
+
+# Currently updating
+## Allow hashing for smaller bit length
+Since bit length plays a big role in both the multiplicative depth and the number of multiplications, we want to do hashing. The original version of the protocol neglects hashing.
+
+## Allow more flexible bundle size
+The current bundle size supported is only the same as the number of bins. We want to support more settings for bundle size and support more experiments.
+I plan to divide the bundle sizes into two cases:
+- With a small bundle size (need more experiments to confirm, but most likely bundle size <= 4), we support a Branching Program data structure.
+- With a large bundle size, we do not need a tree anymore since most likely there is no duplicated note.
+
+# Future works
+## Labeled PSI
