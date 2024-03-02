@@ -10,16 +10,16 @@
 #include "apsi/plaintext_bits.h"
 
 namespace apsi{
-    struct BP{  
+    struct BranchingProgram{  
     public:
         /*
             Initialize binary tree.
             This tree is implemented in an array-like structure. 
             To initialize it, we create the first element of multiple arrays mentioned in the construction. This first element represents the root node of the tree.
         */
-        BP();
+        BranchingProgram();
 
-        BP(const CryptoContext &crypto_context);
+        BranchingProgram(const CryptoContext &crypto_context);
 
         void clear();
 

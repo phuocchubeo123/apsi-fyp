@@ -65,7 +65,7 @@ namespace apsi {
                 return bundle_size_;
             }
 
-            const apsi::BP &bp() const
+            const apsi::BranchingProgram &bp() const
             {
                 return bp_;
             }
@@ -76,7 +76,7 @@ namespace apsi {
             */
             CryptoContext crypto_context_;
 
-            apsi::BP bp_;
+            apsi::BranchingProgram bp_;
 
             int32_t bundle_size_;
         };

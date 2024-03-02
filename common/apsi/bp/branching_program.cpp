@@ -5,17 +5,17 @@ using namespace apsi;
 using namespace seal;
 
 namespace apsi{
-    BP::BP(): nodes_count_(1), leaves_count_(0){
+    BranchingProgram::BranchingProgram(): nodes_count_(1), leaves_count_(0){
         clear();
     }
 
-    BP::BP(const CryptoContext &crypto_context): 
+    BranchingProgram::BranchingProgram(const CryptoContext &crypto_context): 
         nodes_count_(1), leaves_count_(0), crypto_context_(crypto_context)
     {
         clear();
     }
 
-    void BP::clear(){
+    void BranchingProgram::clear(){
         id.clear(); id.push_back(0);
         left_child_.clear(); left_child_.push_back(-1);
         right_child_.clear(); right_child_.push_back(-1);
@@ -31,12 +31,12 @@ namespace apsi{
     }
 
     template <>
-    int32_t BP::addItem(const PlaintextBits &item){
+    int32_t BranchingProgram::addItem(const PlaintextBits &item){
         item_.push_back(item);
         return item_.size();
     }
 
-    Ciphertext BP::eval(
+    Ciphertext BranchingProgram::eval(
         const vector<Ciphertext> &ciphertext_bits, 
         const CryptoContext &crypto_context,
         MemoryPoolHandle &pool) const

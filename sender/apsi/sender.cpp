@@ -193,7 +193,7 @@ namespace apsi {
 
             rp->bundle_idx = bundle_idx;
 
-            const BP &branching_prog = bundle.get().bp();
+            const BranchingProgram &branching_prog = bundle.get().bp();
 
             APSI_LOG_INFO("Evaluating branching program with " << all_bits[bundle_idx].size() << " bits");
 
