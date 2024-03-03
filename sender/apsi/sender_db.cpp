@@ -205,6 +205,7 @@ namespace apsi {
                 // By some uniformity assumption, the number of things to insert per partition
                 // should be roughly the same. Note that the contents of bundle_indices is always
                 // sorted (increasing order).
+
                 set<size_t> bundle_indices_set;
                 for (auto &data_with_idx: data_with_indices){
                     size_t cuckoo_idx = data_with_idx.second;
@@ -220,6 +221,8 @@ namespace apsi {
                     bundle_indices_set.end(),
                     back_inserter(bundle_indices));
                 sort(bundle_indices.begin(), bundle_indices.end());
+
+                // Here we store the items with their corresponding indices into correct bundles and bins 
 
                 vector<vector<vector<Item>>> datas(bundle_indices.size(), vector<vector<T>>(receiver_bins_per_bundle));
                 for (auto &data_with_idx: data_with_indices){

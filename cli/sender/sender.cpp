@@ -38,10 +38,7 @@ unique_ptr<CSVReader::DBData> load_db(const string &db_file);
 
 shared_ptr<SenderDB> create_sender_db(
     const CSVReader::DBData &db_data,
-    unique_ptr<PSIParams> psi_params,
-    OPRFKey &oprf_key,
-    size_t nonce_byte_count,
-    bool compress);
+    unique_ptr<PSIParams> psi_params);
 
 int main(int argc, char *argv[]){
     prepare_console();
@@ -63,17 +60,7 @@ void sigint_handler(int param [[maybe_unused]])
     exit(0);
 }
 
-shared_ptr<SenderDB> try_load_sender_db(const CLP &cmd, OPRFKey &oprf_key)
-{
-    shared_ptr<SenderDB> result = nullptr;
-
-    ifstream fs(cmd.db_file(), ios::binary);
-    fs.exceptions(ios_base::badbit | ios_base::failbit);
-
-    return 0;
-}
-
-shared_ptr<SenderDB> try_load_csv_db(const CLP &cmd, OPRFKey &oprf_key)
+shared_ptr<SenderDB> try_load_csv_db(const CLP &cmd)
 {
     APSI_LOG_INFO("Reading PSI parameters...")
     unique_ptr<PSIParams> params = build_psi_params(cmd);
@@ -94,7 +81,7 @@ shared_ptr<SenderDB> try_load_csv_db(const CLP &cmd, OPRFKey &oprf_key)
     }
 
     return create_sender_db(
-        *db_data, move(params), oprf_key, cmd.nonce_byte_count(), cmd.compress());
+        *db_data, move(params));
 }
 
 int start_sender(const CLP& cmd){
@@ -105,33 +92,22 @@ int start_sender(const CLP& cmd){
     // Check that the database file is valid
     throw_if_file_invalid(cmd.db_file());
 
-    // Try loading first as a SenderDB, then as a CSV file
+    // Try loading first as CSV file
     shared_ptr<SenderDB> sender_db;
-    OPRFKey oprf_key;
 
-    APSI_LOG_INFO("Trying to load sender db...");
+    APSI_LOG_INFO("Loading sender db...");
 
-    if (!(sender_db = try_load_sender_db(cmd, oprf_key)) &&
-        !(sender_db = try_load_csv_db(cmd, oprf_key))) {
+    if (!(sender_db = try_load_csv_db(cmd))) {
         APSI_LOG_ERROR("Failed to create SenderDB: terminating");
         return -1;
     }
 
-    // Try to save the SenderDB if a save file was given
-    // if (!cmd.sdb_out_file().empty() && !try_save_sender_db(cmd, sender_db, oprf_key)) {
-    //     return -1;
-    // }
-
     // Run the dispatcher
     atomic<bool> stop = false;
-    ZMQSenderDispatcher dispatcher(sender_db, oprf_key);
+    ZMQSenderDispatcher dispatcher(sender_db);
 
     // The dispatcher will run until stopped.
     dispatcher.run(stop, cmd.net_port());
-
-    return 0;
-
-
     return 0;
 }
 
@@ -151,10 +127,8 @@ unique_ptr<CSVReader::DBData> load_db(const string &db_file)
 
 shared_ptr<SenderDB> create_sender_db(
     const CSVReader::DBData &db_data,
-    unique_ptr<PSIParams> psi_params,
-    OPRFKey &oprf_key,
-    size_t nonce_byte_count,
-    bool compress)
+    unique_ptr<PSIParams> psi_params
+    )
 {
     if (!psi_params) {
         APSI_LOG_ERROR("No PSI parameters were given");
