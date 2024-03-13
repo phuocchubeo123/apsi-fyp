@@ -1,0 +1,5 @@
+# Source files in this directory
+set(APSI_SOURCE_FILES ${APSI_SOURCE_FILES}
+)
+
+set(APSI_SOURCE_FILES ${APSI_SOURCE_FILES} PARENT_SCOPE)

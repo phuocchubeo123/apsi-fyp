@@ -160,6 +160,14 @@ else()
     message(STATUS "jsoncpp: found")
 endif()
 
+# Openssl: for various hashing stuff
+find_package(OpenSSL REQUIRED)
+if (NOT OpenSSL_FOUND)
+    message(FATAL_ERROR "OpenSSL: not found")
+else()
+    message(STATUS "OpenSSL: found")
+endif()
+
 # [Option] APSI_USE_LOG4CPLUS (default: ON)
 set(APSI_USE_LOG4CPLUS_OPTION_STR "Use Log4cplus for logging")
 option(APSI_USE_LOG4CPLUS ${APSI_USE_LOG4CPLUS_OPTION_STR} ON)
@@ -193,6 +201,7 @@ if(APSI_USE_ZMQ)
     endif()
 endif()
 
+
 # [Option] APSI_BUILD_TESTS (default: OFF)
 set(APSI_BUILD_TESTS_OPTION_STR "Build unit and integration tests for APSI")
 option(APSI_BUILD_TESTS ${APSI_BUILD_TESTS_OPTION_STR} OFF)
@@ -205,6 +214,7 @@ if(APSI_BUILD_TESTS)
         message(STATUS "GTest: found")
     endif()
 endif()
+
 
 # [Option] APSI_BUILD_CLI (default: OFF)
 set(APSI_BUILD_CLI_OPTION_STR "Build example command line interface applications")
@@ -275,6 +285,7 @@ apsi_link_threads(apsi)
 apsi_install_target(apsi APSITargets)
 
 target_link_libraries(apsi
+    PUBLIC OpenSSL::SSL OpenSSL::Crypto
     PUBLIC SEAL::seal
     PUBLIC Kuku::kuku
     PUBLIC flatbuffers::flatbuffers
