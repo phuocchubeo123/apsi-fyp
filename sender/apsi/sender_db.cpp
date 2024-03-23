@@ -89,7 +89,7 @@ namespace apsi {
                 STOPWATCH(sender_stopwatch, "preprocess_unlabeled_data");
                 APSI_LOG_INFO(
                     "Start preprocessing " << distance(begin, end) << " unlabeled items");
-                
+
                 // Some variables we'll need
                 size_t item_bit_count = params.item_bit_count();
 

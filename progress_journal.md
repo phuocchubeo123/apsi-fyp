@@ -7,6 +7,9 @@ Progress so far:
 - Added openssl.
 - I have also kind of figured out where to put these files in this folder structure.
 
+23/3/2024:
+I am trying to do permutation-based cuckoo hashing for the receiver. I am looking at receiver.cpp file, where I put a placeholder there, and will use permutation-based cuckoo hashing in it.
+
 What's next:
 - First look at the cuckoo.h file, and figure out what is needed to do cuckoo hashing.
 

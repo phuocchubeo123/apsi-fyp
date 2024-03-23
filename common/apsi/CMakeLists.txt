@@ -13,5 +13,6 @@ add_subdirectory(oprf)
 add_subdirectory(fourq)
 add_subdirectory(bp)
 add_subdirectory(crypto)
+add_subdirectory(hashing)
 
 set(APSI_SOURCE_FILES ${APSI_SOURCE_FILES} PARENT_SCOPE)

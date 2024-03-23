@@ -190,6 +190,19 @@ namespace apsi {
             IndexTranslationTable itt;
             itt.item_count_ = items.size();
 
+            // placeholder for point-and-permute
+            vector<Item> hash_table;
+            uint32_t* perm = (uint32_t*) calloc(neles, sizeof(uint32_t));
+            prf_state_ctx* prf_state;
+            int cuckoo_result = cuckoo_hashing(items, 
+                                            params_.receiver_params().n_elements,
+                                            params_.table_params().table_size,
+                                            params_.item_params().item_bit_count,
+                                            params_.item_params().out_bit_count,
+                                            perm,
+                                            prf_state);
+
+
             // Create the cuckoo table
             KukuTable cuckoo(
                 params_.table_params().table_size,      // Size of the hash table

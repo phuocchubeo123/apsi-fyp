@@ -26,6 +26,8 @@
 #include "apsi/responses.h"
 #include "apsi/seal_object.h"
 
+#include "apsi/hashing/cuckoo.h"
+
 namespace apsi {
     namespace receiver {
         /**

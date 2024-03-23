@@ -21,6 +21,8 @@
 #include "sender/clp.h"
 #include "sender/sender_utils.h"
 
+#include "apsi/hashing/cuckoo.h"
+
 using namespace std;
 #if defined(__GNUC__) && (__GNUC__ < 8) && !defined(__clang__)
 namespace fs = std::experimental::filesystem;
@@ -49,6 +51,19 @@ int main(int argc, char *argv[]){
         APSI_LOG_ERROR("Failed parsing command line arguments");
         return -1;
     }
+
+    int* elements;
+    int neles;
+    int nbins;
+    int elebitlen;
+    int outbitlen;
+    int nelesinbin;
+    int perm;
+    int ntasks; 
+    prf_state_ctx prf_state;
+
+    hash_table = cuckoo_hashing(elements, neles, nbins, elebitlen, &outbitlen,
+			nelesinbin, perm, ntasks, prf_state);
 
     return start_sender(cmd);
 }
