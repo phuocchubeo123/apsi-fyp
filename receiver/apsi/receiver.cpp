@@ -194,13 +194,20 @@ namespace apsi {
             vector<Item> hash_table;
             uint32_t* perm = (uint32_t*) calloc(neles, sizeof(uint32_t));
             prf_state_ctx* prf_state;
-            int cuckoo_result = cuckoo_hashing(items, 
+            uint8_t* cuckoo_table = cuckoo_hashing(items, 
                                             params_.receiver_params().n_elements,
                                             params_.table_params().table_size,
                                             params_.item_params().item_bit_count,
                                             params_.item_params().out_bit_count,
                                             perm,
                                             prf_state);
+            
+            // Once the table is filled, fill the table_idx_to_item_idx map
+            for (int )
+            for (size_t item_idx = 0; item_idx < items.size(); item_idx++) {
+                auto item_loc = cuckoo.query(items[item_idx].get_as<kuku::item_type>().front());
+                itt.table_idx_to_item_idx_[item_loc.location()] = item_idx;
+            }
 
 
             // Create the cuckoo table

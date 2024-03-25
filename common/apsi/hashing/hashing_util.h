@@ -58,6 +58,12 @@ static const uint32_t SELECT_BITS_INV[33] = \
 
 static const uint8_t BYTE_SELECT_BITS_INV[8] = {0xFF, 0x7F, 0x3F, 0x1F, 0x0F, 0x07, 0x03, 0x01};
 
+
+struct hashing{
+
+};
+
+
 /**
  * @brief Init the values for the hash function
  * 
@@ -123,6 +129,54 @@ static void free_hashing_state(hs_t* hs){
 		free(hs->hf_values[i]);
 	}
 	free(hs->address_used);
+}
+
+
+//TODO: a generic place holder, can be replaced by any other hash function
+//inline void hashElement(uint8_t* element, uint32_t* address, uint8_t* val, uint32_t hfid, hs_t* hs) {
+inline void hashElement(uint8_t* element, uint32_t* address, uint8_t* val, hs_t* hs) {
+
+	uint64_t i, j, L, R;
+	TABLEID_T hfmaskaddr;
+	//Store the first hs->addrbitlen bits in L
+	L = *((uint32_t*) element) & SELECT_BITS[hs->addrbitlen];
+	//Store the remaining hs->outbitlen bits in R and pad correspondingly
+	R = (*((uint32_t*) element) & SELECT_BITS_INV[hs->addrbitlen]) >> (hs->addrbitlen);
+
+	R &= hs->mask;//mask = (1<<32-hs->addrbitlen)
+
+
+	hfmaskaddr = R * sizeof(uint32_t);
+	//cout << "L = " << L << ", R = " << R << " addresses: ";
+
+	for(i = 0; i < NUM_HASH_FUNCTIONS; i++) {
+		for(j = 0; j < hs->nhfvals; j++) {
+			address[i] = (L ^ *((hs->hf_values[i][j]+hfmaskaddr))) % hs->nbins;
+		}
+	}
+
+	*((uint32_t*) val)  = (uint32_t) R;
+	//TODO copy remaining bits
+
+	//if(hs->outbytelen >= sizeof(uint32_t))
+	if(hs->inbitlen > sizeof(uint32_t) * 8) {
+		//memcpy(val + (sizeof(uint32_t) - hs->addrbytelen), element + sizeof(uint32_t), hs->outbytelen - (sizeof(uint32_t) - hs->addrbytelen));
+		memcpy(val + (sizeof(uint32_t) - (hs->floor_addrbitlen >>3)), element + sizeof(uint32_t), hs->outbytelen - (sizeof(uint32_t) - (hs->floor_addrbitlen >>3)));
+
+		//cout << "Element: "<< (hex) << (uint32_t) val[hs->outbytelen-1] << ", " << (uint32_t) (BYTE_SELECT_BITS_INV[hs->outbitlen & 0x03])
+		//		<< ", " << (uint32_t) (val[hs->outbytelen-1] & (BYTE_SELECT_BITS_INV[hs->outbitlen & 0x03]) )<< (dec) << " :";
+
+		val[hs->outbytelen-1] &= (BYTE_SELECT_BITS_INV[hs->outbitlen & 0x03]);
+
+		for(i = 0; i < hs->inbytelen; i++) {
+			cout << (hex) << (uint32_t) element[i];
+		}
+		cout << ", ";
+		for(i = 0; i < hs->outbytelen; i++) {
+			cout << (hex) << (uint32_t) val[i];
+		}
+		cout << (dec) << endl;
+	}
 }
 
 #endif /* HASHING_UTIL_H_*/

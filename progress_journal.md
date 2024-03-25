@@ -10,6 +10,9 @@ Progress so far:
 23/3/2024:
 I am trying to do permutation-based cuckoo hashing for the receiver. I am looking at receiver.cpp file, where I put a placeholder there, and will use permutation-based cuckoo hashing in it.
 
+24/3/2024:
+We need to study the hashElement function. Basically, we can start hashing the elements and pre-calculate all of its possible addresses, while doing cuckoo hashing. I think this also applies for permutation-based hashing.
+
 What's next:
 - First look at the cuckoo.h file, and figure out what is needed to do cuckoo hashing.
 
