@@ -3,9 +3,9 @@
 
 namespace apsi{
 	namespace hashing{
-		CuckooTable::CuckooTable(int hash_table_size, int hash_function_count, Item empty_element){
+		CuckooTable::CuckooTable(PSIParams params, Item empty_element){
 			hash_table_size_ = hash_table_size;
-			hash_table_.resize(hash_table_size);
+			hash_table.resize(hash_table_size);
 			hash_function_count_ = hash_function_count;
 		}
 

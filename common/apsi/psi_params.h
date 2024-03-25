@@ -50,6 +50,7 @@ namespace apsi{
             constexpr static std::uint32_t item_bit_count_max = 64;
 
             std::uint32_t item_bit_count;
+            std::uint32_t hashed_item_bit_count;
         };
 
         /**

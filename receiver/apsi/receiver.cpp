@@ -30,6 +30,7 @@ using namespace kuku;
 namespace apsi {
     using namespace util;
     using namespace network;
+    using namespace hashing;
 
     namespace {
         template <typename T>
@@ -191,6 +192,7 @@ namespace apsi {
             itt.item_count_ = items.size();
 
             // placeholder for point-and-permute
+
             vector<Item> hash_table;
             uint32_t* perm = (uint32_t*) calloc(neles, sizeof(uint32_t));
             prf_state_ctx* prf_state;
@@ -201,6 +203,12 @@ namespace apsi {
                                             params_.item_params().out_bit_count,
                                             perm,
                                             prf_state);
+
+            LubyRackoff luby_rackoff(params_);
+            {
+                STOPWATCH(recv_stopwatch, "Receiver::create_query::cuckoo_hashing_point_and_permute");
+
+            }
             
             // Once the table is filled, fill the table_idx_to_item_idx map
             for (int )

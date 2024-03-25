@@ -9,6 +9,7 @@
 #define CUCKOO_H_
 
 #include "hashing_util.h"
+#include "apsi/item.h"
 
 struct cuckoo_entry_ctx {
 	//id of the element in the source set
@@ -33,7 +34,6 @@ struct cuckoo_entry_gen_ctx {
 	uint8_t* elements;
 	//pointer to the cuckoo entries
 	cuckoo_entry_ctx* cuckoo_entries;
-	hs_t* hs;
 };
 
 namespace apsi{
@@ -54,21 +54,21 @@ namespace apsi{
 		class CuckooTable{
 		public:
 
-			CuckooTable(int hash_table_size, int hash_function_count, Item empty_element);
+			CuckooTable(PSIParams params, Item empty_element);
 
 			void cuckoo_hashing();
 			void insert_element(CuckooEntry element);		
 
 		private:
-			uint32_t hash_table_size_;
-			vector<Item> hash_table_;
+			uint32_t hash_table_size;
+			vector<Item> hash_table;
 
-			uint32_t hash_functions_count_;
-			uint32_t max_iterations_;
-			uint32_t bit_length_;
-			uint32_t out_bit_length_;
-			uint32_t* perm_;
-			prf_state_ctx* prf_state_;
+			uint32_t hash_functions_count;
+			uint32_t max_iterations;
+			uint32_t bit_length;
+			uint32_t out_bit_length;
+			uint32_t* perm;
+			prf_state_ctx* prf_state;
 		}; // class CuckooHashing
 	} // namespace hashing
 } // namespace apsi

@@ -6,35 +6,20 @@
  * github: https://github.com/encryptogroup/PSI.git
  */
 
+#include <cstdint>
 
+#include "apsi/crypto/crypto.h"
 
 #ifndef HASHING_UTIL_H_
 #define HASHING_UTIL_H_
 
-typedef uint16_t TABLEID_T; // the datatype to store table address
+typedef std::uint16_t TABLEID_T; // the datatype to store table address
 
 #define NUM_HASH_FUNCTIONS 3
 
 #define MAX_TABLE_SIZE_BYTES sizeof(TABLEID_T);
 #define DUMMY_ENTRY_SERVER 0x00
 #define DUMMY_ENTRY_CLIENT 0xFF
-
-typedef struct hashing_state_ctx {
-	uint32_t** hf_values[NUM_HASH_FUNCTIONS]; // hash function values
-	uint32_t nhfvals; // the number of possible hash function values
-	uint32_t nelements; 
-	uint32_t nbins; // number of bins
-	uint32_t inbitlen; // bit length of input
-	uint32_t addrbitlen; // bit length of address (which bin it is in?)
-	uint32_t floor_addrbitlen; 
-	uint32_t outbitlen; // bit length of output
-	//the byte values, are stored separately since they are needed very often
-	uint32_t inbytelen;
-	uint32_t addrbytelen;
-	uint32_t outbytelen;
-	uint32_t* address_used;
-	uint32_t mask;
-} hs_t;
 
 //TODO: generate these randomly for each execution and communicate them between the parties
 static const uint32_t HF_MASKS[3] = {0x00000000, 0x33333333, 0x14894568};
@@ -59,124 +44,44 @@ static const uint32_t SELECT_BITS_INV[33] = \
 static const uint8_t BYTE_SELECT_BITS_INV[8] = {0xFF, 0x7F, 0x3F, 0x1F, 0x0F, 0x07, 0x03, 0x01};
 
 
-struct hashing{
+namespace apsi{
+	namespace hashing{
+		struct LubyRackoff{
+		public:
 
-};
+			LubyRackoff(PSIParams params);
 
+			void initialize();
 
-/**
- * @brief Init the values for the hash function
- * 
- * @param hs Pointer to the hashing state object to be initialized.
- * @param nelements Number of elements in the hashing state.
- * @param inbitlen Input bit length for hashing.
- * @param nbins Number of bins for the hashing state.
- * @param prf_state Pointer to the PRF (Pseudorandom Function) state context.
- 
-*/
-static void init_hashing_state(hs_t* hs, uint32_t nelements, uint32_t inbitlen, uint32_t nbins,
-		prf_state_ctx* prf_state) {
-	uint32_t i, j, nrndbytes;
-	hs->nelements = nelements;
-	hs->nbins = nbins;
+			void free_hashing_state();
 
-	hs->inbitlen = inbitlen;
-	hs->addrbitlen = min((uint32_t) ceil_log2(nbins), inbitlen);
-	hs->floor_addrbitlen = min((uint32_t) floor_log2(nbins), inbitlen);
+        	void pointAndPermute(uint8_t* element, uint32_t* address, uint8_t* val);
 
-    // Luby-rackoff encryption a.k.a point-and-permute
-	hs->outbitlen = hs->inbitlen - hs->addrbitlen+1;
+			void LubyRackoff::domain_hashing(uint8_t** elements, uint32_t* elebytelens, uint8_t* result, uint32_t resultbytelen, crypto* crypt);
 
-    hs->inbytelen = ceil_divide(hs->inbitlen, 8);
-	hs->addrbytelen = ceil_divide(hs->addrbitlen, 8);
-	hs->outbytelen = ceil_divide(hs->outbitlen, 8);
+		private:
+			uint32_t hash_functions_count;
 
-    hs->nhfvals = ceil_divide(hs->outbytelen, MAX_TABLE_SIZE_BYTES); 
+			vector<uint32_t> hf_values; // hash function values
+			uint32_t hash_functions_values_count; // the number of possible hash function values
+			std::uint32_t table_size;
+			std::uint32_t inbitlen;
+			std::uint32_t addrbitlen; // bit length of address (which bin it is in?)
+			std::uint32_t outbitlen; // bit length of output after point-and-permute
 
-	nrndbytes = (1<<(8*MAX_TABLE_SIZE_BYTES)) * sizeof(uint32_t);
-
-    for(i = 0; i < NUM_HASH_FUNCTIONS; i++) {
-		hs->hf_values[i] = (uint32_t**) malloc(sizeof(uint32_t*) * hs->nhfvals);
-
-		for(j = 0; j < hs->nhfvals; j++) {
-			hs->hf_values[i][j] = (uint32_t*) malloc(nrndbytes);
-			assert(hs->hf_values[i][j]);
-			gen_rnd_bytes(prf_state, (uint8_t*) hs->hf_values[i][j], nrndbytes);
-		}
-	}
-
-	hs->address_used = (uint32_t*) calloc(nbins, sizeof(uint32_t));
-	hs->mask = 0xFFFFFFFF;
-	if(hs->inbytelen < sizeof(uint32_t)) {
-		hs->mask >>= (sizeof(uint32_t) * 8 - hs->inbitlen - hs->addrbitlen);
+			//the byte values, are stored separately since they are needed very often
+			uint32_t inbytelen;
+			uint32_t addrbytelen;
+			uint32_t outbytelen;
+			uint32_t* address_used;
+			uint32_t mask;
+			prf_state_ctx* prf_state;		
+		};
 	}
 }
 
-/*
-/**
- * @brief Deallocates memory used by a hashing state object.
- * 
- * @param hs Pointer to the hashing state object (hs_t) whose memory is to be deallocated.
-*/
 
 
-static void free_hashing_state(hs_t* hs){
-    uint32_t i, j;
-	for(i = 0; i < NUM_HASH_FUNCTIONS; i++) {
-		for(j = 0; j  < hs->nhfvals; j++) {
-			free(hs->hf_values[i][j]);
-		}
-		free(hs->hf_values[i]);
-	}
-	free(hs->address_used);
-}
 
-
-//TODO: a generic place holder, can be replaced by any other hash function
-//inline void hashElement(uint8_t* element, uint32_t* address, uint8_t* val, uint32_t hfid, hs_t* hs) {
-inline void hashElement(uint8_t* element, uint32_t* address, uint8_t* val, hs_t* hs) {
-
-	uint64_t i, j, L, R;
-	TABLEID_T hfmaskaddr;
-	//Store the first hs->addrbitlen bits in L
-	L = *((uint32_t*) element) & SELECT_BITS[hs->addrbitlen];
-	//Store the remaining hs->outbitlen bits in R and pad correspondingly
-	R = (*((uint32_t*) element) & SELECT_BITS_INV[hs->addrbitlen]) >> (hs->addrbitlen);
-
-	R &= hs->mask;//mask = (1<<32-hs->addrbitlen)
-
-
-	hfmaskaddr = R * sizeof(uint32_t);
-	//cout << "L = " << L << ", R = " << R << " addresses: ";
-
-	for(i = 0; i < NUM_HASH_FUNCTIONS; i++) {
-		for(j = 0; j < hs->nhfvals; j++) {
-			address[i] = (L ^ *((hs->hf_values[i][j]+hfmaskaddr))) % hs->nbins;
-		}
-	}
-
-	*((uint32_t*) val)  = (uint32_t) R;
-	//TODO copy remaining bits
-
-	//if(hs->outbytelen >= sizeof(uint32_t))
-	if(hs->inbitlen > sizeof(uint32_t) * 8) {
-		//memcpy(val + (sizeof(uint32_t) - hs->addrbytelen), element + sizeof(uint32_t), hs->outbytelen - (sizeof(uint32_t) - hs->addrbytelen));
-		memcpy(val + (sizeof(uint32_t) - (hs->floor_addrbitlen >>3)), element + sizeof(uint32_t), hs->outbytelen - (sizeof(uint32_t) - (hs->floor_addrbitlen >>3)));
-
-		//cout << "Element: "<< (hex) << (uint32_t) val[hs->outbytelen-1] << ", " << (uint32_t) (BYTE_SELECT_BITS_INV[hs->outbitlen & 0x03])
-		//		<< ", " << (uint32_t) (val[hs->outbytelen-1] & (BYTE_SELECT_BITS_INV[hs->outbitlen & 0x03]) )<< (dec) << " :";
-
-		val[hs->outbytelen-1] &= (BYTE_SELECT_BITS_INV[hs->outbitlen & 0x03]);
-
-		for(i = 0; i < hs->inbytelen; i++) {
-			cout << (hex) << (uint32_t) element[i];
-		}
-		cout << ", ";
-		for(i = 0; i < hs->outbytelen; i++) {
-			cout << (hex) << (uint32_t) val[i];
-		}
-		cout << (dec) << endl;
-	}
-}
 
 #endif /* HASHING_UTIL_H_*/
