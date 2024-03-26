@@ -10,6 +10,7 @@
 
 #include "hashing_util.h"
 #include "apsi/item.h"
+#include "apsi/psi_params.h"
 
 struct cuckoo_entry_ctx {
 	//id of the element in the source set
@@ -39,31 +40,48 @@ struct cuckoo_entry_gen_ctx {
 namespace apsi{
 	namespace hashing{
 		struct CuckooEntry{	
-		public:
-			CuckooEntry(uint32_t hash_functions_count){
-				hash_functions_count_ = hash_functions_count;	
-				address_.resize(hash_functions_count_);
+			CuckooEntry(){
+				address.resize(1);
+				address[0] = -1;
 			}
 
-		private:
-			uint32_t hash_functions_count_;
-			vector<uint32_t> address_;
+
+			CuckooEntry(const PSIParams &params){
+				hash_func_count = params.table_params().hash_func_count;	
+				address.resize(hash_func_count);
+			}
+
+			void increase_pos(){
+				(pos += 1) %= hash_func_count;
+			}
+
+			bool is_empty(){
+				return (address[0] == -1);
+			}
+
+			uint32_t hash_func_count;
+			vector<uint32_t> address;
+
+			uint32_t pos;
 		};
 
 
 		class CuckooTable{
 		public:
+			CuckooTable(PSIParams params, Item empty_element, LubyRackoff hs);
 
-			CuckooTable(PSIParams params, Item empty_element);
-
-			void cuckoo_hashing();
-			void insert_element(CuckooEntry element);		
+			void initialize();
+			bool insert_element(const CuckooEntry &element);		
 
 		private:
-			uint32_t hash_table_size;
-			vector<Item> hash_table;
+			PSIParams params_;
+			Item empty_element_;
 
-			uint32_t hash_functions_count;
+			LubyRackoff hs_;
+
+			vector<CuckooEntry> hash_table;
+			uint32_t hash_func_count;
+
 			uint32_t max_iterations;
 			uint32_t bit_length;
 			uint32_t out_bit_length;

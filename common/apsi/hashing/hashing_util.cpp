@@ -49,7 +49,7 @@ namespace apsi{
 	        }
         }
 
-        void LubyRackoff::pointAndPermute(uint32_t element, uint32_t* address, uint8_t* vals) {
+        void LubyRackoff::point_and_permute(uint32_t element, uint32_t* address, uint8_t* vals) {
 
 	        uint64_t i, j, L, R;
 	        TABLEID_T hfmaskaddr;
@@ -73,16 +73,10 @@ namespace apsi{
 	        }
         }
 
-		void LubyRackoff::domain_hashing(uint8_t** elements, uint32_t* elebytelens, uint8_t* result, uint32_t resultbytelen, crypto* crypt) {
-			uint8_t *resultptr;//, *hash_buf;
-			uint32_t i, j;
-
-			resultptr = result;
-			//hash_buf = (uint8_t*) calloc(crypt->get_hash_bytes(), sizeof(uint8_t));
-			for(i = 0; i < nelements; i++, resultptr+=resultbytelen) {
-				//memcpy(hash_buf, elements[i], elebytelens[i]);
-				crypt->hash(resultptr, resultbytelen, elements[i], elebytelens[i]);
-			}
+		uint32_t LubyRackoff::domain_hashing(uint32_t element) {
+			uint32_t result;//, *hash_buf;
+			result = sha256_hash(element, inbitlen, outbitlen);
+			return result;
 		}
 
 

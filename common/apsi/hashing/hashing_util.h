@@ -9,6 +9,7 @@
 #include <cstdint>
 
 #include "apsi/crypto/crypto.h"
+#include "apsi/psi_params.h"
 
 #ifndef HASHING_UTIL_H_
 #define HASHING_UTIL_H_
@@ -48,16 +49,15 @@ namespace apsi{
 	namespace hashing{
 		struct LubyRackoff{
 		public:
-
 			LubyRackoff(PSIParams params);
 
 			void initialize();
 
 			void free_hashing_state();
 
-        	void pointAndPermute(uint8_t* element, uint32_t* address, uint8_t* val);
+        	void point_and_permute(uint32_t element, uint32_t* address, uint8_t* val);
 
-			void LubyRackoff::domain_hashing(uint8_t** elements, uint32_t* elebytelens, uint8_t* result, uint32_t resultbytelen, crypto* crypt);
+			uint32_t domain_hashing(uint32_t element, uint32_t outbitlen);
 
 		private:
 			uint32_t hash_functions_count;
