@@ -11,7 +11,7 @@
 
 namespace apsi{
 	namespace hashing{
-		void gen_rnd_bytes(prf_state_ctx* prf_state, uint8_t* resbuf, uint32_t nbytes) {
+		uint32_t gen_rnd_bytes(prf_state_ctx* prf_state, uint32_t nbytes) {
 			AES_KEY_CTX* aes_key;
 			uint64_t* rndctr;
 			uint8_t* tmpbuf;
@@ -28,15 +28,18 @@ namespace apsi{
 				EVP_EncryptUpdate(*aes_key, tmpbuf + i * AES_BYTES, &dummy, (uint8_t*) rndctr, AES_BYTES);
 			}
 
+			uint32_t* resbuf;
+
 			memcpy(resbuf, tmpbuf, nbytes);
 
 			free(tmpbuf);
+			return *resbuf;
 		}
 
 		uint32_t sha256_hash(uint32_t* inbuf, uint32_t inbitlen, uint32_t outbitlen) {
 			SHA256_CTX sha;
 			SHA256_Init(&sha);
-			SHA256_Update(&sha, inbuf, inbitlen / 8);
+			SHA256_Update(&sha, inbuf, (inbitlen + 7) / 8);
 
 			uint8_t* hash_buf;
 			SHA256_Final(hash_buf, &sha);

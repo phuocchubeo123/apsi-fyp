@@ -52,19 +52,6 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
-    int* elements;
-    int neles;
-    int nbins;
-    int elebitlen;
-    int outbitlen;
-    int nelesinbin;
-    int perm;
-    int ntasks; 
-    prf_state_ctx prf_state;
-
-    hash_table = cuckoo_hashing(elements, neles, nbins, elebitlen, &outbitlen,
-			nelesinbin, perm, ntasks, prf_state);
-
     return start_sender(cmd);
 }
 

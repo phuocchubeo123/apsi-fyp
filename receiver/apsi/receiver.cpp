@@ -12,6 +12,7 @@
 #include "apsi/thread_pool_mgr.h"
 #include "apsi/util/label_encryptor.h"
 #include "apsi/util/utils.h"
+#include "apsi/hashing/cuckoo.h"
 
 // SEAL
 #include "seal/ciphertext.h"
@@ -207,6 +208,8 @@ namespace apsi {
                 for (size_t item_idx = 0; item_idx < items.size(); item_idx++){
                     CuckooEntry new_entry(params_);
                     uint32_t domain_value = luby_rackoff.domain_hashing(items[item_idx].int_val);
+                    APSI_LOG_INFO("Item value: " << items[item_idx].int_val << " domain value: " << domain_value);
+                    new_entry.address = luby_rackoff.point_and_permute(domain_value);
                     cuckoo_table.insert_element(new_entry);
                 }
             }

@@ -18,7 +18,7 @@ typedef std::uint16_t TABLEID_T; // the datatype to store table address
 
 #define NUM_HASH_FUNCTIONS 3
 
-#define MAX_TABLE_SIZE_BYTES sizeof(TABLEID_T);
+#define MAX_TABLE_SIZE_BYTES sizeof(TABLEID_T)
 #define DUMMY_ENTRY_SERVER 0x00
 #define DUMMY_ENTRY_CLIENT 0xFF
 
@@ -56,23 +56,21 @@ namespace apsi{
 			void free_hashing_state();
 
         	void point_and_permute(uint32_t element, uint32_t* address, uint8_t* val);
-
-			uint32_t domain_hashing(uint32_t element, uint32_t outbitlen);
+			uint32_t domain_hashing(uint32_t element);
 
 		private:
+			PSIParams params_;
+
 			uint32_t hash_functions_count;
 
 			vector<uint32_t> hf_values; // hash function values
 			uint32_t hash_functions_values_count; // the number of possible hash function values
 			std::uint32_t table_size;
+			std::uint32_t item_bit_count;
 			std::uint32_t inbitlen;
 			std::uint32_t addrbitlen; // bit length of address (which bin it is in?)
 			std::uint32_t outbitlen; // bit length of output after point-and-permute
 
-			//the byte values, are stored separately since they are needed very often
-			uint32_t inbytelen;
-			uint32_t addrbytelen;
-			uint32_t outbytelen;
 			uint32_t* address_used;
 			uint32_t mask;
 			prf_state_ctx* prf_state;		
