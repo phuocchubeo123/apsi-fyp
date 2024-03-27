@@ -263,6 +263,8 @@ namespace apsi {
 
         std::string to_string() const;
 
+        uint32_t int_val;
+
     private:
         void hash_to_value(const void *in, std::size_t size);
         value_type value_{};

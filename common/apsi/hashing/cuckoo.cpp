@@ -3,7 +3,7 @@
 
 namespace apsi{
 	namespace hashing{
-		CuckooTable::CuckooTable(PSIParams params, Item empty_element, LubyRackoff hs): params_(params), empty_element_(empty_element), hs_(hs){
+		CuckooTable::CuckooTable(PSIParams params, Item empty_element): params_(params), empty_element_(empty_element){
 			initialize();
 		}
 

@@ -33,6 +33,13 @@ namespace apsi {
             value_.push_back(c - '0');
         }
 
+        int bit = 0;
+        int_val = 0;
+        for (char c: str){
+            int_val ^= ((c - '0') << bit);
+            bit++;
+        }
+
         // int cc = 0;
         // for (char c: str){
         //     value_hashed_[2*cc] = c;

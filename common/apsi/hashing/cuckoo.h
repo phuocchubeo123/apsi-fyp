@@ -68,7 +68,7 @@ namespace apsi{
 
 		class CuckooTable{
 		public:
-			CuckooTable(PSIParams params, Item empty_element, LubyRackoff hs);
+			CuckooTable(PSIParams params, Item empty_element);
 
 			void initialize();
 			bool insert_element(const CuckooEntry &element);		
@@ -76,8 +76,6 @@ namespace apsi{
 		private:
 			PSIParams params_;
 			Item empty_element_;
-
-			LubyRackoff hs_;
 
 			vector<CuckooEntry> hash_table;
 			uint32_t hash_func_count;

@@ -194,29 +194,23 @@ namespace apsi {
             // placeholder for point-and-permute
 
             vector<Item> hash_table;
-            uint32_t* perm = (uint32_t*) calloc(neles, sizeof(uint32_t));
+            uint32_t* perm = (uint32_t*) calloc(items.size(), sizeof(uint32_t));
             prf_state_ctx* prf_state;
-            uint8_t* cuckoo_table = cuckoo_hashing(items, 
-                                            params_.receiver_params().n_elements,
-                                            params_.table_params().table_size,
-                                            params_.item_params().item_bit_count,
-                                            params_.item_params().out_bit_count,
-                                            perm,
-                                            prf_state);
 
+            Item empty_item;
+            CuckooTable cuckoo_table(params_, empty_item);
             LubyRackoff luby_rackoff(params_);
             {
                 STOPWATCH(recv_stopwatch, "Receiver::create_query::cuckoo_hashing_point_and_permute");
+                APSI_LOG_INFO("Inserting" << items.size() << " items into the cuckoo table");
 
+                for (size_t item_idx = 0; item_idx < items.size(); item_idx++){
+                    CuckooEntry new_entry(params_);
+                    uint32_t domain_value = luby_rackoff.domain_hashing(items[item_idx].int_val);
+                    cuckoo_table.insert_element(new_entry);
+                }
             }
             
-            // Once the table is filled, fill the table_idx_to_item_idx map
-            for (int )
-            for (size_t item_idx = 0; item_idx < items.size(); item_idx++) {
-                auto item_loc = cuckoo.query(items[item_idx].get_as<kuku::item_type>().front());
-                itt.table_idx_to_item_idx_[item_loc.location()] = item_idx;
-            }
-
 
             // Create the cuckoo table
             KukuTable cuckoo(
