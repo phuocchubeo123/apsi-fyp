@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <queue>
+#include <cmath>
 
 // APSI
 #include "apsi/item.h"
@@ -32,17 +33,19 @@ namespace apsi{
             const std::vector<seal::Ciphertext> &ciphertext_bits,
             const CryptoContext &crypto_context,
             seal::MemoryPoolHandle &pool) const;
+
+        seal::Ciphertext eval_less_mult(
+            const std::vector<seal::Ciphertext> &ciphertext_bits,
+            const CryptoContext &crypto_context,
+            seal::MemoryPoolHandle &pool) const;
+
+        void patterson_stockmeyer(uint32_t d);
             
     private:
         int nodes_count_;
         int leaves_count_;
 
         std::vector<int> id;
-        std::vector<int> left_child_;
-        std::vector<int> right_child_;
-        std::vector<int> parent_;
-        std::vector<int> level_;
-        std::vector<int> is_leaf_;
 
         CryptoContext crypto_context_;
 
