@@ -20,7 +20,7 @@ namespace apsi{
 	        int nrndbytes;
 	        nrndbytes = (1<<(8*MAX_TABLE_SIZE_BYTES)) * sizeof(uint32_t);
 
-            for(int i = 0; i < hash_functions_count; i++) {
+            for(int i = 0; i < hash_func_count; i++) {
 			    uint32_t x = gen_rnd_bytes(prf_state, nrndbytes);
 				hf_values[i] = x;
 	        }
@@ -39,7 +39,7 @@ namespace apsi{
 	        // }
         }
 
-        void LubyRackoff::point_and_permute(uint32_t element, uint32_t* address, uint8_t* vals) {
+        vector<uint32_t> LubyRackoff::point_and_permute(uint32_t element) {
 
 	        uint64_t i, j, L, R;
 	        TABLEID_T hfmaskaddr;
@@ -54,13 +54,17 @@ namespace apsi{
 	        hfmaskaddr = R * sizeof(uint32_t);
 	        //cout << "L = " << L << ", R = " << R << " addresses: ";
 
-	        for(i = 0; i < NUM_HASH_FUNCTIONS; i++) {
-			    address[i] = (L ^ (hf_values[i][0])) % table_size;
+			vector<uint32_t> address(hash_func_count);
+
+	        for(i = 0; i < hash_func_count; i++) {
+			    address[i] = (L ^ (hf_values[i])) % table_size;
 	        }
 
-            for(uint64_t i = 0; i < NUM_HASH_FUNCTIONS; i++) {
+            for(uint64_t i = 0; i < hash_func_count; i++) {
 		        address[i] = (((element+i) ^ HF_MASKS[i]) & SELECT_BITS[addrbitlen]) % table_size;
 	        }
+
+			return address;
         }
 
 		uint32_t LubyRackoff::domain_hashing(uint32_t element) {

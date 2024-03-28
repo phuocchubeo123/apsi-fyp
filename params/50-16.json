@@ -1,0 +1,17 @@
+{
+    "seal_params": {
+        "plain_modulus": 65537,
+        "poly_modulus_degree": 2048,
+        "coeff_modulus_bits": [ 48 ]
+    },
+    "table_params": {
+        "table_size": 20,
+        "hash_func_count": 3,
+        "receiver_bins_per_bundle": 20,
+        "sender_bins_per_bundle": 20
+    },
+    "item_params": {
+        "item_bit_count": 16,
+        "hash_item_bit_count": 5
+    }
+}

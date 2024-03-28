@@ -103,7 +103,6 @@ namespace apsi {
             PSIParams params(sender_db->get_params());
 
             uint32_t bundle_idx_count = params.bundle_idx_count();
-            uint32_t max_items_per_bin = params.table_params().max_items_per_bin;
             uint32_t item_bit_count = params.item_params().item_bit_count;
 
             // The query response only tells how many ResultPackages to expect; send this first

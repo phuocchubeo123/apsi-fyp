@@ -55,13 +55,13 @@ namespace apsi{
 
 			void free_hashing_state();
 
-        	void point_and_permute(uint32_t element, uint32_t* address, uint8_t* val);
+        	vector<uint32_t> point_and_permute(uint32_t element);
 			uint32_t domain_hashing(uint32_t element);
 
 		private:
 			PSIParams params_;
 
-			uint32_t hash_functions_count;
+			uint32_t hash_func_count;
 
 			vector<uint32_t> hf_values; // hash function values
 			uint32_t hash_functions_values_count; // the number of possible hash function values

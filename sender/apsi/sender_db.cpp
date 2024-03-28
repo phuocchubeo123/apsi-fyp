@@ -137,7 +137,6 @@ namespace apsi {
                 CryptoContext &crypto_context,
                 uint32_t bundle_index,
                 uint32_t receiver_bins_per_bundle,
-                size_t max_bin_size,
                 const PSIParams &params)
             {
                 STOPWATCH(sender_stopwatch, "insert_or_assign_worker");
@@ -196,7 +195,6 @@ namespace apsi {
                 vector<BinBundle> &bin_bundles,
                 CryptoContext &crypto_context,
                 uint32_t receiver_bins_per_bundle,
-                uint32_t max_bin_size,
                 const PSIParams &params)
             {
                 ThreadPoolMgr tpm;
@@ -246,7 +244,6 @@ namespace apsi {
                             crypto_context,
                             static_cast<uint32_t>(bundle_idx),
                             receiver_bins_per_bundle,
-                            max_bin_size,
                             params);
                     });
                 }
@@ -333,7 +330,6 @@ namespace apsi {
             vector<pair<Item, size_t>> data_with_indices =
                 preprocess_unlabeled_data(data.begin(), data.end(), params_);
 
-            uint32_t max_bin_size = params_.table_params().max_items_per_bin;
             uint32_t receiver_bins_per_bundle = params_.table_params().receiver_bins_per_bundle;
             uint32_t sender_bins_per_bundle = params_.table_params().sender_bins_per_bundle;
 
@@ -342,7 +338,6 @@ namespace apsi {
                 bin_bundles_,
                 crypto_context_,
                 receiver_bins_per_bundle,
-                max_bin_size,
                 params_);
 
             // APSI_LOG_INFO("Number of bundles: " << bin_bundles_.size());

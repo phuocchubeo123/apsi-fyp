@@ -36,10 +36,10 @@ namespace apsi{
 			return *resbuf;
 		}
 
-		uint32_t sha256_hash(uint32_t* inbuf, uint32_t inbitlen, uint32_t outbitlen) {
+		uint32_t sha256_hash(uint32_t inbuf, uint32_t inbitlen, uint32_t outbitlen) {
 			SHA256_CTX sha;
 			SHA256_Init(&sha);
-			SHA256_Update(&sha, inbuf, (inbitlen + 7) / 8);
+			SHA256_Update(&sha, &inbuf, (inbitlen + 7) / 8);
 
 			uint8_t* hash_buf;
 			SHA256_Final(hash_buf, &sha);

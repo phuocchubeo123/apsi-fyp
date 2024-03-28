@@ -36,7 +36,7 @@ struct prf_state_ctx {
 
 namespace apsi{
 	namespace hashing{
-		uint32_t sha256_hash(uint32_t* inbuf, uint32_t inbitlen, uint32_t outbitlen);
+		uint32_t sha256_hash(uint32_t inbuf, uint32_t inbitlen, uint32_t outbitlen);
 
 		uint32_t gen_rnd_bytes(prf_state_ctx* prf_state, uint32_t nbytes);
 

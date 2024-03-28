@@ -95,17 +95,6 @@ namespace apsi {
         if (!table_params_.table_size) {
             throw invalid_argument("table_size cannot be zero");
         }
-        if (!table_params_.max_items_per_bin) {
-            throw invalid_argument("max_items_per_bin cannot be zero");
-        }
-        if (table_params_.hash_func_count < TableParams::hash_func_count_min ||
-            table_params_.hash_func_count > TableParams::hash_func_count_max) {
-            throw invalid_argument("hash_func_count is too large or too small");
-        }
-        if (item_params_.item_bit_count < ItemParams::item_bit_count_min ||
-            item_params_.item_bit_count > ItemParams::item_bit_count_max) {
-            throw invalid_argument("item_bit_count is too large or too small");
-        }
         
         // Create a SEALContext (with expand_mod_chain == false) to check validity of parameters
         SEALContext seal_context(seal_params_, false, sec_level_type::tc128);
@@ -154,14 +143,14 @@ namespace apsi {
 
         fbs::TableParams table_params(
             table_params_.table_size,
-            table_params_.max_items_per_bin,
             table_params_.hash_func_count,
             table_params_.receiver_bins_per_bundle,
             table_params_.sender_bins_per_bundle
             );
 
         fbs::ItemParams item_params(
-            item_params_.item_bit_count
+            item_params_.item_bit_count,
+            item_params_.hashed_item_bit_count
         );
 
         vector<seal_byte> temp;
@@ -189,6 +178,7 @@ namespace apsi {
 
     pair<PSIParams, size_t> PSIParams::Load(istream &in)
     {
+        APSI_LOG_INFO("Loading params from istream");
         vector<unsigned char> in_data(util::read_from_stream(in));
 
         auto verifier = flatbuffers::Verifier(
@@ -212,13 +202,13 @@ namespace apsi {
 
         PSIParams::TableParams table_params;
         table_params.table_size = psi_params->table_params()->table_size();
-        table_params.max_items_per_bin = psi_params->table_params()->max_items_per_bin();
         table_params.hash_func_count = psi_params->table_params()->hash_func_count();
         table_params.receiver_bins_per_bundle = psi_params->table_params()->receiver_bins_per_bundle();
         table_params.sender_bins_per_bundle = psi_params->table_params()->sender_bins_per_bundle();
 
         PSIParams::ItemParams item_params;
         item_params.item_bit_count = psi_params->item_params()->item_bit_count();
+        item_params.hashed_item_bit_count = psi_params->item_params()->hashed_item_bit_count();
 
         PSIParams::SEALParams seal_params;
         auto &seal_params_data = *psi_params->seal_params()->data();
@@ -254,6 +244,7 @@ namespace apsi {
     #ifndef APSI_DISABLE_JSON
     PSIParams PSIParams::Load(const string &in)
     {
+        APSI_LOG_INFO("Loading params from json string");
         // Parse JSON string
         Json::Value root;
         stringstream ss(in);
@@ -265,8 +256,6 @@ namespace apsi {
             const auto &json_table_params = get_non_null_json_value(root, "table_params");
             table_params.hash_func_count = json_value_ui32(json_table_params, "hash_func_count");
             table_params.table_size = json_value_ui32(json_table_params, "table_size");
-            table_params.max_items_per_bin =
-                json_value_ui32(json_table_params, "max_items_per_bin");
             table_params.receiver_bins_per_bundle =
                 json_value_ui32(json_table_params, "receiver_bins_per_bundle");
             table_params.sender_bins_per_bundle =
@@ -281,6 +270,7 @@ namespace apsi {
         try {
             const auto &json_item_params = get_non_null_json_value(root, "item_params");
             item_params.item_bit_count = json_value_ui32(json_item_params, "item_bit_count");
+            item_params.hashed_item_bit_count = json_value_ui32(json_item_params, "hashed_item_bit_count");
         } catch (const exception &ex) {
             APSI_LOG_ERROR("Failed to load item_params from JSON string: " << ex.what());
             throw;
@@ -336,11 +326,11 @@ namespace apsi {
     {
         stringstream ss;
         ss << "; table_params.table_size: " << table_params_.table_size
-           << "; table_params.max_items_per_bin: " << table_params_.max_items_per_bin
            << "; table_params.hash_func_count: " << table_params_.hash_func_count
            << "; table_params.receiver_bins_per_bundle: " << table_params_.receiver_bins_per_bundle
            << "; table_params.sender_bins_per_bundle: " << table_params_.sender_bins_per_bundle
            << "; item_params.item_bit_count: " << item_params_.item_bit_count
+           << "; item_params.hashed_item_bit_count: " << item_params_.hashed_item_bit_count
            << "; seal_params.poly_modulus_degree: " << seal_params_.poly_modulus_degree()
            << "; seal_params.coeff_modulus: "
            << util::to_string(

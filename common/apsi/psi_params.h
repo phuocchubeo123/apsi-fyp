@@ -67,14 +67,6 @@ namespace apsi{
             std::uint32_t table_size;
 
             /**
-            Specifies the number of sender's items stored in a single hash table bin. A larger value
-            requires a deeper encrypted computation, or more powers of the encrypted query to be
-            sent from the receiver to the sender, but reduces the number of ciphertexts sent from
-            the sender to the receiver.
-            */
-            std::uint32_t max_items_per_bin;
-
-            /**
             The number of hash functions used in receiver's cuckoo hashing.
             */
             std::uint32_t hash_func_count;
@@ -141,18 +133,6 @@ namespace apsi{
         PSIParams &operator=(const PSIParams &copy) = default;
 
         std::string to_string() const;
-
-        /**
-        Returns an approximate base-2 logarithm of the false-positive probability per receiver's
-        item.
-        */
-        double log2_fpp() const
-        {
-            return std::min<double>(
-                0.0,
-                (-static_cast<double>(item_bit_count_) +
-                 std::log2(static_cast<double>(table_params_.max_items_per_bin))));
-        }
 
         /**
         Writes the PSIParams to a stream.
