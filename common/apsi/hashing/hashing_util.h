@@ -8,6 +8,7 @@
 
 #include <cstdint>
 
+#include "apsi/log.h"
 #include "apsi/crypto/crypto.h"
 #include "apsi/psi_params.h"
 
@@ -49,7 +50,7 @@ namespace apsi{
 	namespace hashing{
 		struct LubyRackoff{
 		public:
-			LubyRackoff(PSIParams params);
+			LubyRackoff(PSIParams params, prf_state_ctx* prf_state);
 
 			void initialize();
 
@@ -73,7 +74,7 @@ namespace apsi{
 
 			uint32_t* address_used;
 			uint32_t mask;
-			prf_state_ctx* prf_state;		
+			prf_state_ctx* prf_state_;		
 		};
 	}
 }

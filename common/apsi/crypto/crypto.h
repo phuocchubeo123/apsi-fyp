@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <string.h>
 
+#include "apsi/log.h"
 #include "apsi/util/typedefs.h"
 
 #define AES_BYTES 16

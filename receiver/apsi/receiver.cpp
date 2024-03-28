@@ -195,18 +195,23 @@ namespace apsi {
             // placeholder for point-and-permute
 
             vector<Item> hash_table;
-            uint32_t* perm = (uint32_t*) calloc(items.size(), sizeof(uint32_t));
-            prf_state_ctx* prf_state;
+            APSI_LOG_INFO("Initialized hash table");
 
             Item empty_item;
             CuckooTable cuckoo_table(params_, empty_item);
-            LubyRackoff luby_rackoff(params_);
+            APSI_LOG_INFO("Initialized cuckoo table");
+
+            prf_state_ctx* prf_state;
+            APSI_LOG_INFO("Initialized prf state");
+            LubyRackoff luby_rackoff(params_, prf_state);
+            APSI_LOG_INFO("Initialized luby rackoff");
             {
                 STOPWATCH(recv_stopwatch, "Receiver::create_query::cuckoo_hashing_point_and_permute");
                 APSI_LOG_INFO("Inserting" << items.size() << " items into the cuckoo table");
 
                 for (size_t item_idx = 0; item_idx < items.size(); item_idx++){
                     CuckooEntry new_entry(params_);
+                    APSI_LOG_INFO("Done creating new entry");
                     uint32_t domain_value = luby_rackoff.domain_hashing(items[item_idx].int_val);
                     APSI_LOG_INFO("Item value: " << items[item_idx].int_val << " domain value: " << domain_value);
                     new_entry.address = luby_rackoff.point_and_permute(domain_value);

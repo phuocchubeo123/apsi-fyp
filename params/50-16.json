@@ -12,6 +12,6 @@
     },
     "item_params": {
         "item_bit_count": 16,
-        "hash_item_bit_count": 5
+        "hashed_item_bit_count": 5
     }
 }

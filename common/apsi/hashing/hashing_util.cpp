@@ -2,7 +2,7 @@
 
 namespace apsi{
     namespace hashing{
-        LubyRackoff::LubyRackoff(PSIParams params) : params_(move(params)){
+        LubyRackoff::LubyRackoff(PSIParams params, prf_state_ctx* prf_state) : params_(move(params)), prf_state_(prf_state){
             initialize();
         }
 
@@ -17,13 +17,17 @@ namespace apsi{
 
             hash_functions_values_count = ceil_divide(ceil_divide(outbitlen, 8), MAX_TABLE_SIZE_BYTES); 
 
+			APSI_LOG_INFO("Done some simple stuff");
+
 	        int nrndbytes;
 	        nrndbytes = (1<<(8*MAX_TABLE_SIZE_BYTES)) * sizeof(uint32_t);
 
             for(int i = 0; i < hash_func_count; i++) {
-			    uint32_t x = gen_rnd_bytes(prf_state, nrndbytes);
+			    uint32_t x = gen_rnd_bytes(prf_state_, nrndbytes);
 				hf_values[i] = x;
 	        }
+
+			APSI_LOG_INFO("Done generate seed");
 
 	        address_used = (uint32_t*) calloc(table_size, sizeof(uint32_t));
 	        mask = 0xFFFFFFFF;
